@@ -3,11 +3,11 @@ Version: 0.0.0-9000
 Title: Enhancing the 'pkgdown' Package
 Imports:
     desc,
-    pkgbuild,
     pkgdown,
     R.utils,
     tools,
-    utils
+    utils,
+    yaml
 Enhances:
     pkgdown
 Authors@R: c(person("Henrik", "Bengtsson", role=c("aut", "cre", "cph"),

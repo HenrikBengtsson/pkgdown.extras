@@ -1,12 +1,13 @@
 #' @importFrom desc desc_get_field
 #' @importFrom pkgbuild build
-#' @importFrom utils file_test
-#' @importFrom tools pkgVignettes vignetteEngine
+#' @importFrom utils file_test untar
+#' @importFrom tools pkgVignettes vignetteEngine file_path_sans_ext file_ext
+#' @importFrom yaml write_yaml
 #' @export
 pkgdown_build <- function(path = ".", ...) {
   stopifnot(file_test("-d", path))
 
-  pkgname <- desc::desc_get_field("Package")
+  pkgname <- desc_get_field("Package")
 
   build_root <- tempdir()
   build_path <- file.path(build_root, pkgname)
@@ -28,83 +29,35 @@ pkgdown_build <- function(path = ".", ...) {
   opwd <- setwd(build_path)
   on.exit(setwd(opwd), add = TRUE)
 
-  ## Vignettes
-  vignettes <- tools::pkgVignettes(dir = ".")
-  nvignettes <- length(vignettes$docs)
-  message("Number of vignettes: ", nvignettes)
-  if (nvignettes > 0) {
-    message(sprintf("Processing vignettes: [n=%d] %s",
-            nvignettes, commaq(vignettes$names)))
-    vignette_builders <- desc::desc_get_field("VignetteBuilder")
-    for (pkg in vignette_builders) {
-      if (!requireNamespace(pkg, quietly = TRUE)) {
-        stop("Failed to load vignette-builder package: ", sQuote(pkg))
-      }
-    }
-
-    dir <- vignettes$dir
-    stopifnot(file_test("-d", dir))
-    opwd2 <- setwd(dir)
-
-    for (kk in seq_len(nvignettes)) {
-      name <- vignettes$names[kk]
-      file <- vignettes$docs[kk]
-      message(sprintf("Vignette %d (%s) of %d", kk, name, length(vignettes)))
-      engine_name <- vignettes$engine[kk]
-      engine <- tools::vignetteEngine(engine_name)
-      if (!requireNamespace(engine$package, quietly = TRUE)) {
-        stop("Failed to load vignette-builder package: ", sQuote(engine$package))
-      }
-
-      ## Special cases
-      if (engine_name == "R.rsp::rsp") {
-        target_file <- tools::file_path_sans_ext(file)
-        target_dir <- dirname(target_file)
-        target_ext <- tools::file_ext(target_file)
-        
-        ## *.md.rsp
-        if (target_ext == "md") {
-          ## Compile *.md.rsp to *.md
-          opwd3 <- setwd(tempdir())
-          target <- engine$weave(file, postprocess = FALSE)
-          setwd(opwd3)
-          
-          ## Create mockup Rmarkdown file
-          rmd <- tools::file_path_sans_ext(target)
-          rmd <- paste(rmd, ".Rmd", sep = "")
-          metadata <- attr(target, "metadata")
-          yaml <- list(
-            title  = metadata$title,
-            author = metadata$author
-          )
-          bfr <- readLines(target)
-          con <- file(rmd, open = "w")
-          cat("---\n", file = con)
-          yaml::write_yaml(yaml, file = con)
-          cat("---\n", file = con)
-          writeLines(bfr, con = con)
-          close(con)
-
-          # No longer needed
-          file.remove(target_file)
-          stopifnot(!file_test("-f", target_file))
-
-          pkgdown_file <- file.path(target_dir, basename(rmd))
-          stopifnot(!file_test("-f", pkgdown_file))
-          file.rename(rmd, pkgdown_file)
-          stopifnot(file_test("-f", pkgdown_file))
-        }
-      }
-    } ## for (kk ...)
-    
-    setwd(opwd2)
-  } ## if (nvignettes > 0)
+  ## Shim vignettes
+  vignettes <- pkgdown_shim_vignettes()
+  utils::str(vignettes)
 
   pkgdown::build_site(pkg = ".", preview = FALSE)
   docs_path <- "docs"
   stopifnot(file_test("-d", docs_path))
-  setwd(opwd)
 
+  ## Fix up any references to the shim Rmarkdown files
+  if (!is.null(vignettes)) {
+    for (kk in seq_along(vignettes$docs)) {
+      name <- vignettes$names[kk]
+      file <- basename(vignettes$docs[kk])
+      shim_file <- basename(vignettes$shim_docs[kk])
+      article_file <- file.path("docs", "articles", sprintf("%s.html", name))
+      stopifnot(file_test("-f", article_file))
+      content <- readLines(article_file)
+
+      ## Vignette source links
+      search <- sprintf("vignettes/%s", shim_file)
+      replace <- sprintf("vignettes/%s", file)
+      content <- gsub(search, replace, content)
+      
+      writeLines(content, con = article_file)
+    }
+  }
+
+
+  setwd(opwd)
   docs_path <- file.path(build_path, "docs")
   stopifnot(file_test("-d", docs_path))
 
@@ -112,3 +65,96 @@ pkgdown_build <- function(path = ".", ...) {
   file.rename(docs_path, "docs")
   stopifnot(file_test("-d", "docs"))
 }
+
+
+
+
+#' @importFrom utils file_test 
+#' @importFrom tools pkgVignettes vignetteEngine file_path_sans_ext file_ext
+#' @importFrom yaml write_yaml
+pkgdown_shim_vignettes <- function(path = ".", ...) {
+  stopifnot(file_test("-d", path))
+  opwd <- setwd(path)
+  on.exit(setwd(opwd), add = TRUE)
+
+  ## Vignettes
+  vignettes <- pkgVignettes(dir = ".")
+  nvignettes <- length(vignettes$docs)
+  message("Number of vignettes: ", nvignettes)
+  if (nvignettes > 0) {
+    message(sprintf("Processing vignettes: [n=%d] %s",
+            nvignettes, commaq(vignettes$names)))
+    dir <- vignettes$dir
+    stopifnot(file_test("-d", dir))
+    opwd2 <- setwd(dir)
+
+    shim_docs <- rep(NA_character_, times = nvignettes)
+
+    for (kk in seq_len(nvignettes)) {
+      name <- vignettes$names[kk]
+      file <- vignettes$docs[kk]
+      message(sprintf("Vignette %d (%s) of %d", kk, name, length(vignettes)))
+      engine_name <- vignettes$engines[kk]
+      engine <- vignetteEngine(engine_name)
+      if (!requireNamespace(engine$package, quietly = TRUE)) {
+        stop("Failed to load vignette-builder package: ", sQuote(engine$package))
+      }
+
+      ## Special cases
+      if (engine_name == "R.rsp::rsp") {
+        target_file <- file_path_sans_ext(file)
+        target_dir <- dirname(target_file)
+        target_ext <- file_ext(target_file)
+        
+        ## *.md.rsp
+        if (target_ext == "md") {
+          ## Compile *.md.rsp to *.md
+          opwd3 <- setwd(tempdir())
+          target <- engine$weave(file, postprocess = FALSE, quiet = TRUE)
+          setwd(opwd3)
+          
+          # No longer needed
+          file.remove(file)
+          stopifnot(!file_test("-f", file))
+          
+          ## Create mockup Rmarkdown file
+          rmd <- file_path_sans_ext(target)
+          rmd <- paste(rmd, ".Rmd", sep = "")
+          metadata <- attr(target, "metadata")
+          content <- readLines(target)
+          # No longer needed
+          file.remove(target)
+          stopifnot(!file_test("-f", target))
+          
+          yaml <- list(
+            title  = metadata$title,
+            author = metadata$author
+          )
+
+          local({
+            con <- file(rmd, open = "w")
+            on.exit(close(con))
+            cat("---\n", file = con)
+            write_yaml(yaml, file = con)
+            cat("---\n", file = con)
+            writeLines(content, con = con)
+          })
+          content <- yaml <- NULL
+
+          pkgdown_file <- file.path(target_dir, basename(rmd))
+          stopifnot(!file_test("-f", pkgdown_file))
+          file.rename(rmd, pkgdown_file)
+          stopifnot(file_test("-f", pkgdown_file))
+
+          shim_docs[kk] <- pkgdown_file
+        }
+      }
+    } ## for (kk ...)
+    
+    setwd(opwd2)
+    
+    vignettes$shim_docs <- shim_docs
+  } ## if (nvignettes > 0)
+
+  vignettes
+} ## pkgdown_shim_vignettes()
