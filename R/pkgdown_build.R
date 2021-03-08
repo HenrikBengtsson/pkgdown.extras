@@ -58,6 +58,14 @@ pkgdown_build_site <- function(pkg = ".", ..., preview = NA) {
     }
   }
 
+  pkgdown_path <- file.path(pkg, "README.md")
+  target_path <- file.path(build_path, "README.md")
+  if (file_test("-f", pkgdown_path) && !file_test("-f", target_path)) {
+    cat_line("Copying file ", src_path("README.md"))
+    file.copy(pkgdown_path, build_path, recursive = TRUE)
+    stopifnot(file_test("-f", target_path))
+  }
+
   pkgdown_path <- file.path(pkg, "pkgdown")
   if (file_test("-d", pkgdown_path)) {
     cat_line("Copying pkgdown folder ", src_path("pkgdown/"))
