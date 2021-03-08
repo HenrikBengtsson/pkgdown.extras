@@ -98,7 +98,7 @@ pkgdown_shim_vignettes <- function(path = ".", ...) {
           file.remove(target)
           stopifnot(!file_test("-f", target))
           local({
-            con <- file(rmd, open = "w")
+            con <- file(rmd, open = "w+")
             on.exit(close(con))
             cat("---\n", file = con)
             write_yaml(yaml, file = con)
@@ -128,7 +128,7 @@ pkgdown_shim_vignettes <- function(path = ".", ...) {
           rmd <- paste(rmd, ".Rmd", sep = "")
           content <- readLines(file)
           local({
-            con <- file(rmd, open = "w")
+            con <- file(rmd, open = "w+")
             on.exit(close(con))
             cat("---\n", file = con)
             write_yaml(yaml, file = con)
@@ -150,7 +150,7 @@ pkgdown_shim_vignettes <- function(path = ".", ...) {
       cat_line("Weaving ", src_path(file_short))
       target <- local({
         oopts <- options(prompt = "> ", continue = "+ ")
-        opwd3 <- setwd(tempdir())
+        opwd3 <- setwd(dirname(file))
         on.exit({
           setwd(opwd3)
           options(oopts)
@@ -173,10 +173,10 @@ pkgdown_shim_vignettes <- function(path = ".", ...) {
 
         content <- sprintf('<!--- <iframe src="%s"/> -->', basename(target_file))
         content <- c(content, sprintf('Vignette: [PDF](%s){target="_blank"} (%s)', basename(target_file), file_size(target_file)))
-        content <- c(content, sprintf('<iframe src="%s" width="100%"/>', basename(target_file)))
+        content <- c(content, sprintf('<iframe src="%s" width="100%%" height="1000"/>', basename(target_file)))
         
         local({
-          con <- file(rmd, open = "w")
+          con <- file(rmd, open = "w+")
           on.exit(close(con))
           cat("---\n", file = con)
           write_yaml(yaml, file = con)

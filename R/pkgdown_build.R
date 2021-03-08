@@ -48,6 +48,16 @@ pkgdown_build_site <- function(pkg = ".", ..., preview = NA) {
   stopifnot(res == 0)
   stopifnot(file_test("-d", build_path))
 
+  vignettes_path <- file.path(pkg, "vignettes")
+  if (file_test("-d", vignettes_path)) {
+    files <- dir(vignettes_path, pattern = ".pdf$", ignore.case = TRUE, full.names = TRUE)
+    for (file in files) {
+      cat_line("Copying vignette file ", src_path(file))
+      file.copy(file, file.path(build_path, file))
+      stopifnot(file_test("-f", file.path(build_path, file)))
+    }
+  }
+
   pkgdown_path <- file.path(pkg, "pkgdown")
   if (file_test("-d", pkgdown_path)) {
     cat_line("Copying pkgdown folder ", src_path("pkgdown/"))
