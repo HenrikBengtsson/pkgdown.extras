@@ -5,18 +5,29 @@
 #' @importFrom yaml write_yaml
 #' @export
 pkgdown_build <- function(path = ".", ...) {
+  rule <- import_from("pkgdown", "rule")
+  cat_line <- import_from("pkgdown", "cat_line")
+  src_path <- import_from("pkgdown", "src_path")
+  dst_path <- import_from("pkgdown", "dst_path")
+  oopts <- options(width = 80L)
+  on.exit(options(oopts))
+  
   stopifnot(file_test("-d", path))
 
   pkgname <- desc_get_field("Package")
 
+  rule("Preprocessing package for pkgdown", line = "=")
+
   build_root <- tempdir()
   build_path <- file.path(build_root, pkgname)
-
+  
+  cat_line("Create shim package folder", dst_path(build_path))
   tarball <- pkgbuild::build(
     path = ".",
     dest_path = tempdir(),
     vignettes = FALSE,
-    args = c("--no-resave-data", "--no-manual")
+    args = c("--no-resave-data", "--no-manual"),
+    quiet = TRUE
   )
 
   ## Create intermediate package folder
@@ -31,19 +42,23 @@ pkgdown_build <- function(path = ".", ...) {
 
   ## Shim vignettes
   vignettes <- pkgdown_shim_vignettes()
-  utils::str(vignettes)
 
   pkgdown::build_site(pkg = ".", preview = FALSE)
   docs_path <- "docs"
   stopifnot(file_test("-d", docs_path))
 
+
+  rule("Postprocess package for pkgdown", line = "=")
+
   ## Fix up any references to the shim Rmarkdown files
   if (!is.null(vignettes)) {
+    rule("Unshimming package articles")
     for (kk in seq_along(vignettes$docs)) {
       name <- vignettes$names[kk]
       file <- basename(vignettes$docs[kk])
       shim_file <- basename(vignettes$shim_docs[kk])
       article_file <- file.path("docs", "articles", sprintf("%s.html", name))
+      cat_line("Updating ", dst_path(article_file))
       stopifnot(file_test("-f", article_file))
       content <- readLines(article_file)
 
@@ -73,6 +88,11 @@ pkgdown_build <- function(path = ".", ...) {
 #' @importFrom tools pkgVignettes vignetteEngine file_path_sans_ext file_ext
 #' @importFrom yaml write_yaml
 pkgdown_shim_vignettes <- function(path = ".", ...) {
+  rule <- import_from("pkgdown", "rule")
+  cat_line <- import_from("pkgdown", "cat_line")
+  src_path <- import_from("pkgdown", "src_path")
+  dst_path <- import_from("pkgdown", "dst_path")
+
   stopifnot(file_test("-d", path))
   opwd <- setwd(path)
   on.exit(setwd(opwd), add = TRUE)
@@ -80,10 +100,9 @@ pkgdown_shim_vignettes <- function(path = ".", ...) {
   ## Vignettes
   vignettes <- pkgVignettes(dir = ".")
   nvignettes <- length(vignettes$docs)
-  message("Number of vignettes: ", nvignettes)
   if (nvignettes > 0) {
-    message(sprintf("Processing vignettes: [n=%d] %s",
-            nvignettes, commaq(vignettes$names)))
+    rule("Shimming package vignettes")
+
     dir <- vignettes$dir
     stopifnot(file_test("-d", dir))
     opwd2 <- setwd(dir)
@@ -93,12 +112,14 @@ pkgdown_shim_vignettes <- function(path = ".", ...) {
     for (kk in seq_len(nvignettes)) {
       name <- vignettes$names[kk]
       file <- vignettes$docs[kk]
-      message(sprintf("Vignette %d (%s) of %d", kk, name, length(vignettes)))
+      cat_line("Weaving ", src_path(file))
       engine_name <- vignettes$engines[kk]
       engine <- vignetteEngine(engine_name)
-      if (!requireNamespace(engine$package, quietly = TRUE)) {
-        stop("Failed to load vignette-builder package: ", sQuote(engine$package))
-      }
+      suppressPackageStartupMessages({
+        if (!requireNamespace(engine$package, quietly = TRUE)) {
+          stop("Failed to load vignette-builder package: ", sQuote(engine$package))
+        }
+      })
 
       ## Special cases
       if (engine_name == "R.rsp::rsp") {
@@ -109,9 +130,17 @@ pkgdown_shim_vignettes <- function(path = ".", ...) {
         ## *.md.rsp
         if (target_ext == "md") {
           ## Compile *.md.rsp to *.md
-          opwd3 <- setwd(tempdir())
-          target <- engine$weave(file, postprocess = FALSE, quiet = TRUE)
-          setwd(opwd3)
+          target <- local({
+            oopts <- options(prompt = "> ", continue = "+ ")
+            opwd3 <- setwd(tempdir())
+            on.exit({
+              setwd(opwd3)
+              options(oopts)
+            })
+            suppressPackageStartupMessages({
+              engine$weave(file, postprocess = FALSE, quiet = TRUE)
+            })
+          })
           
           # No longer needed
           file.remove(file)
@@ -143,6 +172,7 @@ pkgdown_shim_vignettes <- function(path = ".", ...) {
 
           pkgdown_file <- file.path(target_dir, basename(rmd))
           stopifnot(!file_test("-f", pkgdown_file))
+          cat_line("Writing ", dst_path(pkgdown_file))
           file.rename(rmd, pkgdown_file)
           stopifnot(file_test("-f", pkgdown_file))
 
