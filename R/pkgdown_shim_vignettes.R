@@ -79,27 +79,7 @@ pkgdown_shim_vignettes <- function(path = ".", ...) {
       if (grepl("selfonly$", engine_name)) {
         ## *.md -> *.md
         if (ext == "md") {
-          cat_line("Shimming ", src_path(file_short))
-          ## Create mockup Rmarkdown file
-          rmd <- file_path_sans_ext(file)
-          rmd <- paste(rmd, ".Rmd", sep = "")
-          content <- readLines(file)
-          local({
-            con <- file(rmd, open = "w+")
-            on.exit(close(con))
-            cat("---\n", file = con)
-            write_yaml(yaml, file = con)
-            cat("---\n", file = con)
-            writeLines(content, con = con)
-          })
-          content <- yaml <- NULL
-
-          pkgdown_file <- file.path(target_dir, basename(rmd))
-          pkgdown_file_short <- file.path(basename(dirname(pkgdown_file)), basename(pkgdown_file))
-          cat_line("Writing ", dst_path(pkgdown_file_short))
-          stopifnot(file_test("-f", pkgdown_file))
-
-          shim_docs[kk] <- pkgdown_file
+          shim_docs[kk] <- Rmd_shim_selfonly(file, yaml = yaml, engine = engine)
           next
         }
       }
@@ -168,6 +148,8 @@ pkgdown_shim_vignettes <- function(path = ".", ...) {
 
 
 # Turn an R.rsp::rsp *.md.rsp vignette into an Rmarkdown *.Rmd vignette
+#' @importFrom tools file_path_sans_ext file_ext
+#' @importFrom yaml write_yaml
 Rmd_shim_md_rsp <- function(file, yaml, engine) {
   cat_line <- import_from("pkgdown", "cat_line")
   src_path <- import_from("pkgdown", "src_path")
@@ -234,6 +216,43 @@ Rmd_shim_md_rsp <- function(file, yaml, engine) {
   pkgdown_file_short <- file.path(basename(dirname(pkgdown_file)), basename(pkgdown_file))
   cat_line("Writing ", dst_path(pkgdown_file_short))
   file.rename(rmd, pkgdown_file)
+  stopifnot(file_test("-f", pkgdown_file))
+  pkgdown_file
+}
+
+
+# Turn an *::selfonly *.md vignette into an Rmarkdown *.Rmd vignette
+# Examples: startup::selfonly and progressr::selfonly
+#' @importFrom tools file_path_sans_ext file_ext
+#' @importFrom yaml write_yaml
+Rmd_shim_selfonly <- function(file, yaml, engine) {
+  cat_line <- import_from("pkgdown", "cat_line")
+  src_path <- import_from("pkgdown", "src_path")
+  dst_path <- import_from("pkgdown", "dst_path")
+  
+  target_dir <- dirname(file)
+  target_file <- file_path_sans_ext(file)
+  target_ext <- file_ext(target_file)
+  file_short <- file.path(basename(dirname(file)), basename(file))
+
+  cat_line("Shimming ", src_path(file_short))
+  ## Create mockup Rmarkdown file
+  rmd <- file_path_sans_ext(file)
+  rmd <- paste(rmd, ".Rmd", sep = "")
+  content <- readLines(file)
+  local({
+    con <- file(rmd, open = "w+")
+    on.exit(close(con))
+    cat("---\n", file = con)
+    write_yaml(yaml, file = con)
+    cat("---\n", file = con)
+    writeLines(content, con = con)
+  })
+  content <- yaml <- NULL
+
+  pkgdown_file <- file.path(target_dir, basename(rmd))
+  pkgdown_file_short <- file.path(basename(dirname(pkgdown_file)), basename(pkgdown_file))
+  cat_line("Writing ", dst_path(pkgdown_file_short))
   stopifnot(file_test("-f", pkgdown_file))
   pkgdown_file
 }
