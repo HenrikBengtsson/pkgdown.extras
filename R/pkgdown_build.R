@@ -47,6 +47,14 @@ pkgdown_build_site <- function(pkg = ".", ..., preview = NA) {
   res <- untar(tarball, exdir = tempdir())
   stopifnot(res == 0)
   stopifnot(file_test("-d", build_path))
+
+  pkgdown_path <- file.path(pkg, "pkgdown")
+  if (file_test("-d", pkgdown_path)) {
+    cat_line("Copying pkgdown folder ", src_path("pkgdown/"))
+    file.copy(pkgdown_path, build_path, recursive = TRUE)
+    target_path <- file.path(build_path, "pkgdown")
+    stopifnot(file_test("-d", target_path))
+  }
   
   opwd <- setwd(build_path)
   on.exit(setwd(opwd), add = TRUE)
