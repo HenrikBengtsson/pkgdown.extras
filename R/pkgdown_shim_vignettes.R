@@ -64,73 +64,14 @@ pkgdown_shim_vignettes <- function(path = ".", ...) {
       )
       
       target_dir <- dirname(file)
+      target_file <- file_path_sans_ext(file)
+      target_ext <- file_ext(target_file)
 
       ## Special cases
-      if (engine_name == "R.rsp::rsp") {
-        target_file <- file_path_sans_ext(file)
-        target_ext <- file_ext(target_file)
-
+      if (engine_name == "R.rsp::rsp" && ext == "rsp") {
         ## *.md.rsp -> *.md
-        if (ext == "rsp" && target_ext == "md") {
-          cat_line("Weaving ", src_path(file_short))
-          ## Compile *.md.rsp to *.md
-          target <- local({
-            oopts <- options(prompt = "> ", continue = "+ ")
-            opwd3 <- setwd(tempdir())
-            on.exit({
-              setwd(opwd3)
-              options(oopts)
-            })
-            suppressPackageStartupMessages({
-              engine$weave(file, postprocess = FALSE, quiet = TRUE)
-            })
-          })
-          
-          # No longer needed
-          file.remove(file)
-          stopifnot(!file_test("-f", file))
-          
-          ## Create mockup Rmarkdown file
-          rmd <- file_path_sans_ext(target)
-          rmd <- paste(rmd, ".Rmd", sep = "")
-          content <- readLines(target)
-          # No longer needed
-          file.remove(target)
-          stopifnot(!file_test("-f", target))
-
-          ## 'pkgdown' will create a top ("H1") header with the title 'title'.
-          ## It is likely that the *.md.rsp vignette already has such a top
-          ## header with the same title.  That will result in duplicated
-          ## titles at the top of the 'pkgdown' article.
-          ## Drop top Markdown ("H1") header if it has the same title as the
-          ## vignette (ignoring case).
-          idx <- grep("^#[^#]", content)
-          if (length(idx) > 0) {
-            header <- sub("^#[[:space:]]+", "", content[idx[1]])
-            header <- trim(header)
-            if (tolower(header) == tolower(yaml$title)) {
-              content <- content[-idx]
-            }
-          }
-
-          local({
-            con <- file(rmd, open = "w+")
-            on.exit(close(con))
-            cat("---\n", file = con)
-            write_yaml(yaml, file = con)
-            cat("---\n", file = con)
-            writeLines(content, con = con)
-          })
-          content <- yaml <- NULL
-
-          pkgdown_file <- file.path(target_dir, basename(rmd))
-          stopifnot(!file_test("-f", pkgdown_file))
-          pkgdown_file_short <- file.path(basename(dirname(pkgdown_file)), basename(pkgdown_file))
-          cat_line("Writing ", dst_path(pkgdown_file_short))
-          file.rename(rmd, pkgdown_file)
-          stopifnot(file_test("-f", pkgdown_file))
-
-          shim_docs[kk] <- pkgdown_file
+        if (target_ext == "md") {
+          shim_docs[kk] <- Rmd_shim_md_rsp(file, yaml = yaml, engine = engine)
           next
         }
       }
@@ -222,3 +163,77 @@ pkgdown_shim_vignettes <- function(path = ".", ...) {
 
   vignettes
 } ## pkgdown_shim_vignettes()
+
+
+
+
+# Turn an R.rsp::rsp *.md.rsp vignette into an Rmarkdown *.Rmd vignette
+Rmd_shim_md_rsp <- function(file, yaml, engine) {
+  cat_line <- import_from("pkgdown", "cat_line")
+  src_path <- import_from("pkgdown", "src_path")
+  dst_path <- import_from("pkgdown", "dst_path")
+  
+  target_dir <- dirname(file)
+  target_file <- file_path_sans_ext(file)
+  target_ext <- file_ext(target_file)
+  file_short <- file.path(basename(dirname(file)), basename(file))
+
+  cat_line("Weaving ", src_path(file_short))
+  ## Compile *.md.rsp to *.md
+  target <- local({
+    oopts <- options(prompt = "> ", continue = "+ ")
+    opwd3 <- setwd(tempdir())
+    on.exit({
+      setwd(opwd3)
+      options(oopts)
+    })
+    suppressPackageStartupMessages({
+      engine$weave(file, postprocess = FALSE, quiet = TRUE)
+    })
+  })
+  
+  # No longer needed
+  file.remove(file)
+  stopifnot(!file_test("-f", file))
+  
+  ## Create mockup Rmarkdown file
+  rmd <- file_path_sans_ext(target)
+  rmd <- paste(rmd, ".Rmd", sep = "")
+  content <- readLines(target)
+  # No longer needed
+  file.remove(target)
+  stopifnot(!file_test("-f", target))
+
+  ## 'pkgdown' will create a top ("H1") header with the title 'title'.
+  ## It is likely that the *.md.rsp vignette already has such a top
+  ## header with the same title.  That will result in duplicated
+  ## titles at the top of the 'pkgdown' article.
+  ## Drop top Markdown ("H1") header if it has the same title as the
+  ## vignette (ignoring case).
+  idx <- grep("^#[^#]", content)
+  if (length(idx) > 0) {
+    header <- sub("^#[[:space:]]+", "", content[idx[1]])
+    header <- trim(header)
+    if (tolower(header) == tolower(yaml$title)) {
+      content <- content[-idx]
+    }
+  }
+
+  local({
+    con <- file(rmd, open = "w+")
+    on.exit(close(con))
+    cat("---\n", file = con)
+    write_yaml(yaml, file = con)
+    cat("---\n", file = con)
+    writeLines(content, con = con)
+  })
+  content <- NULL
+
+  pkgdown_file <- file.path(target_dir, basename(rmd))
+  stopifnot(!file_test("-f", pkgdown_file))
+  pkgdown_file_short <- file.path(basename(dirname(pkgdown_file)), basename(pkgdown_file))
+  cat_line("Writing ", dst_path(pkgdown_file_short))
+  file.rename(rmd, pkgdown_file)
+  stopifnot(file_test("-f", pkgdown_file))
+  pkgdown_file
+}
