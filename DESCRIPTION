@@ -3,6 +3,7 @@ Version: 0.0.0-9000
 Title: Enhancing the 'pkgdown' Package
 Imports:
     desc,
+    fs,
     pkgbuild,
     pkgdown,
     R.utils,

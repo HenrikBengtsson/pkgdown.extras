@@ -1,4 +1,5 @@
-#' @importFrom utils file_test 
+#' @importFrom fs file_size
+#' @importFrom utils file_test capture.output
 #' @importFrom tools pkgVignettes vignetteEngine vignetteInfo file_path_sans_ext file_ext
 #' @importFrom yaml write_yaml
 pkgdown_shim_vignettes <- function(path = ".", ...) {
@@ -7,6 +8,7 @@ pkgdown_shim_vignettes <- function(path = ".", ...) {
   src_path <- import_from("pkgdown", "src_path")
   dst_path <- import_from("pkgdown", "dst_path")
   get_vignette_metadata <- import_from("tools", ".get_vignette_metadata")
+  find_vignette_product <- import_from("tools", "find_vignette_product")
 
   stopifnot(file_test("-d", path))
   opwd <- setwd(path)
@@ -46,16 +48,16 @@ pkgdown_shim_vignettes <- function(path = ".", ...) {
         next
       }
       
-      engine <- vignetteEngine(engine_name)
+      vinfo <- vignetteInfo(file)
+      vinfo$author <- get_vignette_metadata(readLines(file), "Author")
+
+      engine <- vignetteEngine(vinfo$engine)
       suppressPackageStartupMessages({
         if (!requireNamespace(engine$package, quietly = TRUE)) {
           stop("Failed to load vignette-builder package: ", sQuote(engine$package))
         }
       })
 
-      vinfo <- vignetteInfo(file)
-      vinfo$author <- get_vignette_metadata(readLines(file), "Author")
-      author <- vinfo$author
       yaml <- list(
         title  = vinfo$title,
         author = vinfo$author
@@ -113,8 +115,11 @@ pkgdown_shim_vignettes <- function(path = ".", ...) {
           stopifnot(file_test("-f", pkgdown_file))
 
           shim_docs[kk] <- pkgdown_file
+          next
         }
-      } else if (grepl("selfonly$", engine_name)) {
+      }
+      
+      if (grepl("selfonly$", engine_name)) {
         ## *.md -> *.md
         if (ext == "md") {
           cat_line("Shimming ", src_path(file_short))
@@ -138,9 +143,56 @@ pkgdown_shim_vignettes <- function(path = ".", ...) {
           stopifnot(file_test("-f", pkgdown_file))
 
           shim_docs[kk] <- pkgdown_file
+          next
         }
       }
+      
+      cat_line("Weaving ", src_path(file_short))
+      target <- local({
+        oopts <- options(prompt = "> ", continue = "+ ")
+        opwd3 <- setwd(tempdir())
+        on.exit({
+          setwd(opwd3)
+          options(oopts)
+        })
+        capture.output(suppressMessages(suppressPackageStartupMessages({
+          engine$weave(file, quiet = TRUE)
+        })))
+        file.path(getwd(), find_vignette_product(name, by = "weave", engine = engine, dir = "."))
+      })
+      stopifnot(file_test("-f", target))
+      ext <- tolower(file_ext(target))
 
+      target_file <- file.path(target_dir, basename(target))
+      file.rename(target, target_file)
+      stopifnot(file_test("-f", target_file))
+
+      if (ext == "pdf") {
+        ## Create mockup Rmarkdown file
+        rmd <- file.path(target_dir, paste(name, ".Rmd", sep = ""))
+
+        content <- sprintf('<!--- <iframe src="%s"/> -->', basename(target_file))
+        content <- c(content, sprintf('Vignette: [PDF](%s){target="_blank"} (%s)', basename(target_file), file_size(target_file)))
+        content <- c(content, sprintf('<iframe src="%s" width="100%"/>', basename(target_file)))
+        
+        local({
+          con <- file(rmd, open = "w")
+          on.exit(close(con))
+          cat("---\n", file = con)
+          write_yaml(yaml, file = con)
+          cat("---\n", file = con)
+          writeLines(content, con = con)
+        })
+        content <- yaml <- NULL
+        
+        pkgdown_file <- file.path(target_dir, basename(rmd))
+        pkgdown_file_short <- file.path(basename(dirname(pkgdown_file)), basename(pkgdown_file))
+        cat_line("Writing ", dst_path(pkgdown_file_short))
+        stopifnot(file_test("-f", pkgdown_file))
+
+        shim_docs[kk] <- pkgdown_file
+        next
+      }
 
       if (is.na(shim_docs[kk])) {
         cat_line("Unsupported ", sQuote(engine_name), " format ", src_path(file_short))
