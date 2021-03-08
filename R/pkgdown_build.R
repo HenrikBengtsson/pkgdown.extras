@@ -1,18 +1,29 @@
+#' Build a complete 'pkgdown' website
+#'
+#' @param pkg Path to package.
+#'
+#' @param \ldots ... Additional arguments passed to [pkgdown::build_site()].
+#'
+#' @param preview Preview site in browser?
+#'
+#' @returns Nothing.
+#'
 #' @importFrom desc desc_get_field
 #' @importFrom pkgbuild build
 #' @importFrom utils file_test untar
 #' @importFrom tools pkgVignettes vignetteEngine file_path_sans_ext file_ext
 #' @importFrom yaml write_yaml
 #' @export
-pkgdown_build <- function(path = ".", ...) {
+pkgdown_build_site <- function(pkg = ".", ..., preview = NA) {
   rule <- import_from("pkgdown", "rule")
   cat_line <- import_from("pkgdown", "cat_line")
   src_path <- import_from("pkgdown", "src_path")
   dst_path <- import_from("pkgdown", "dst_path")
+  preview_site <- import_from("pkgdown", "preview_site")
   oopts <- options(width = 80L)
   on.exit(options(oopts))
   
-  stopifnot(file_test("-d", path))
+  stopifnot(file_test("-d", pkg))
 
   pkgname <- desc_get_field("Package")
 
@@ -21,9 +32,9 @@ pkgdown_build <- function(path = ".", ...) {
   build_root <- tempdir()
   build_path <- file.path(build_root, pkgname)
   
-  cat_line("Create shim package folder", dst_path(build_path))
+  cat_line("Create shim package folder ", dst_path(build_path))
   tarball <- pkgbuild::build(
-    path = ".",
+    path = pkg,
     dest_path = tempdir(),
     vignettes = FALSE,
     args = c("--no-resave-data", "--no-manual"),
@@ -43,7 +54,7 @@ pkgdown_build <- function(path = ".", ...) {
   ## Shim vignettes
   vignettes <- pkgdown_shim_vignettes()
 
-  pkgdown::build_site(pkg = ".", preview = FALSE)
+  pkgdown::build_site(pkg = ".", ..., preview = FALSE)
   docs_path <- "docs"
   stopifnot(file_test("-d", docs_path))
 
@@ -55,14 +66,16 @@ pkgdown_build <- function(path = ".", ...) {
     rule("Unshimming package articles")
     for (kk in seq_along(vignettes$docs)) {
       name <- vignettes$names[kk]
-      file <- basename(vignettes$docs[kk])
       shim_file <- basename(vignettes$shim_docs[kk])
+      if (is.na(shim_file)) next  ## Not shimmed
+      
       article_file <- file.path("docs", "articles", sprintf("%s.html", name))
       cat_line("Updating ", dst_path(article_file))
       stopifnot(file_test("-f", article_file))
       content <- readLines(article_file)
 
       ## Vignette source links
+      file <- basename(vignettes$docs[kk])
       search <- sprintf("vignettes/%s", shim_file)
       replace <- sprintf("vignettes/%s", file)
       content <- gsub(search, replace, content)
@@ -71,14 +84,19 @@ pkgdown_build <- function(path = ".", ...) {
     }
   }
 
-
   setwd(opwd)
   docs_path <- file.path(build_path, "docs")
   stopifnot(file_test("-d", docs_path))
 
-  if (file_test("-d", "docs")) unlink("docs", recursive = TRUE)
-  file.rename(docs_path, "docs")
-  stopifnot(file_test("-d", "docs"))
+  local({
+    opwd <- setwd(pkg)
+    on.exit(setwd(opwd))
+    if (file_test("-d", "docs")) unlink("docs", recursive = TRUE)
+    file.rename(docs_path, "docs")
+    stopifnot(file_test("-d", "docs"))
+  })
+  
+  preview_site(pkg = pkg, preview = preview)
 }
 
 
@@ -112,8 +130,17 @@ pkgdown_shim_vignettes <- function(path = ".", ...) {
     for (kk in seq_len(nvignettes)) {
       name <- vignettes$names[kk]
       file <- vignettes$docs[kk]
-      cat_line("Weaving ", src_path(file))
+      file_short <- file.path(basename(dirname(file)), basename(file))
+      ext <- file_ext(file)
       engine_name <- vignettes$engines[kk]
+      
+      ## Already recognized by 'pkgdown'?
+      ## Source: pkgdown:::package_vignettes
+      if (grepl("\\.[rR]md$", ext)) {
+        cat_line("Skipping ", src_path(file_short), "(processed by pkgdown)")
+        next
+      }
+      
       engine <- vignetteEngine(engine_name)
       suppressPackageStartupMessages({
         if (!requireNamespace(engine$package, quietly = TRUE)) {
@@ -129,6 +156,7 @@ pkgdown_shim_vignettes <- function(path = ".", ...) {
         
         ## *.md.rsp
         if (target_ext == "md") {
+          cat_line("Weaving ", src_path(file_short))
           ## Compile *.md.rsp to *.md
           target <- local({
             oopts <- options(prompt = "> ", continue = "+ ")
@@ -172,12 +200,17 @@ pkgdown_shim_vignettes <- function(path = ".", ...) {
 
           pkgdown_file <- file.path(target_dir, basename(rmd))
           stopifnot(!file_test("-f", pkgdown_file))
-          cat_line("Writing ", dst_path(pkgdown_file))
+          pkgdown_file_short <- file.path(basename(dirname(pkgdown_file)), basename(pkgdown_file))
+          cat_line("Writing ", dst_path(pkgdown_file_short))
           file.rename(rmd, pkgdown_file)
           stopifnot(file_test("-f", pkgdown_file))
 
           shim_docs[kk] <- pkgdown_file
         }
+      }
+
+      if (is.na(shim_docs[kk])) {
+        cat_line("Unsupported ", sQuote(engine_name), " format ", src_path(file_short))
       }
     } ## for (kk ...)
     
