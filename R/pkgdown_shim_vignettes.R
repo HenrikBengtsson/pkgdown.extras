@@ -245,6 +245,32 @@ Rmd_shim_generic <- function(file, yaml, engine) {
   file.rename(target, target_file)
   stopifnot(file_test("-f", target_file))
 
+
+  if (ext == "html") {
+    ## Create mockup Rmarkdown file
+    rmd <- file.path(target_dir, paste(name, ".Rmd", sep = ""))
+
+    content <- sprintf('<!--- <iframe src="%s"/> -->', basename(target_file))
+    content <- c(content, sprintf('Vignette: [HTML](%s){target="_blank"} (%s)', basename(target_file), file_size(target_file)))
+    content <- c(content, sprintf('<iframe src="%s" width="100%%" height="1000"/>', basename(target_file)))
+    
+    local({
+      con <- file(rmd, open = "w+")
+      on.exit(close(con))
+      cat("---\n", file = con)
+      write_yaml(yaml, file = con)
+      cat("---\n", file = con)
+      writeLines(content, con = con)
+    })
+    content <- yaml <- NULL
+    
+    pkgdown_file <- file.path(target_dir, basename(rmd))
+    pkgdown_file_short <- file.path(basename(dirname(pkgdown_file)), basename(pkgdown_file))
+    cat_line("Writing ", dst_path(pkgdown_file_short))
+    stopifnot(file_test("-f", pkgdown_file))
+    return(pkgdown_file)
+  }
+
   if (ext == "pdf") {
     ## Create mockup Rmarkdown file
     rmd <- file.path(target_dir, paste(name, ".Rmd", sep = ""))
