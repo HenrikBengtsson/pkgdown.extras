@@ -83,57 +83,8 @@ pkgdown_shim_vignettes <- function(path = ".", ...) {
           next
         }
       }
-      
-      cat_line("Weaving ", src_path(file_short))
-      target <- local({
-        oopts <- options(prompt = "> ", continue = "+ ")
-        opwd3 <- setwd(dirname(file))
-        on.exit({
-          setwd(opwd3)
-          options(oopts)
-        })
-        capture.output(suppressMessages(suppressPackageStartupMessages({
-          engine$weave(file, quiet = TRUE)
-        })))
-        file.path(getwd(), find_vignette_product(name, by = "weave", engine = engine, dir = "."))
-      })
-      stopifnot(file_test("-f", target))
-      ext <- tolower(file_ext(target))
 
-      target_file <- file.path(target_dir, basename(target))
-      file.rename(target, target_file)
-      stopifnot(file_test("-f", target_file))
-
-      if (ext == "pdf") {
-        ## Create mockup Rmarkdown file
-        rmd <- file.path(target_dir, paste(name, ".Rmd", sep = ""))
-
-        content <- sprintf('<!--- <iframe src="%s"/> -->', basename(target_file))
-        content <- c(content, sprintf('Vignette: [PDF](%s){target="_blank"} (%s)', basename(target_file), file_size(target_file)))
-        content <- c(content, sprintf('<iframe src="%s" width="100%%" height="1000"/>', basename(target_file)))
-        
-        local({
-          con <- file(rmd, open = "w+")
-          on.exit(close(con))
-          cat("---\n", file = con)
-          write_yaml(yaml, file = con)
-          cat("---\n", file = con)
-          writeLines(content, con = con)
-        })
-        content <- yaml <- NULL
-        
-        pkgdown_file <- file.path(target_dir, basename(rmd))
-        pkgdown_file_short <- file.path(basename(dirname(pkgdown_file)), basename(pkgdown_file))
-        cat_line("Writing ", dst_path(pkgdown_file_short))
-        stopifnot(file_test("-f", pkgdown_file))
-
-        shim_docs[kk] <- pkgdown_file
-        next
-      }
-
-      if (is.na(shim_docs[kk])) {
-        cat_line("Unsupported ", sQuote(engine_name), " format ", src_path(file_short))
-      }
+      shim_docs[kk] <- Rmd_shim_generic(file, yaml = yaml, engine = engine)
     } ## for (kk ...)
     
     setwd(opwd2)
@@ -255,4 +206,71 @@ Rmd_shim_selfonly <- function(file, yaml, engine) {
   cat_line("Writing ", dst_path(pkgdown_file_short))
   stopifnot(file_test("-f", pkgdown_file))
   pkgdown_file
+}
+
+
+# Turn an vignette and its product into an Rmarkdown *.Rmd vignette
+# Currently only PDFs are supported. HTML produces is on the to-do list.
+#' @importFrom tools file_path_sans_ext file_ext
+#' @importFrom yaml write_yaml
+Rmd_shim_generic <- function(file, yaml, engine) {
+  cat_line <- import_from("pkgdown", "cat_line")
+  src_path <- import_from("pkgdown", "src_path")
+  dst_path <- import_from("pkgdown", "dst_path")
+  find_vignette_product <- import_from("tools", "find_vignette_product")
+  
+  target_dir <- dirname(file)
+  target_file <- file_path_sans_ext(file)
+  target_ext <- file_ext(target_file)
+  file_short <- file.path(basename(dirname(file)), basename(file))
+  name <- basename(sub(engine$pattern, "", file))
+
+  cat_line("Weaving ", src_path(file_short))
+  target <- local({
+    oopts <- options(prompt = "> ", continue = "+ ")
+    opwd3 <- setwd(dirname(file))
+    on.exit({
+      setwd(opwd3)
+      options(oopts)
+    })
+    capture.output(suppressMessages(suppressPackageStartupMessages({
+      engine$weave(file, quiet = TRUE)
+    })))
+    file.path(getwd(), find_vignette_product(name, by = "weave", engine = engine, dir = "."))
+  })
+  stopifnot(file_test("-f", target))
+  ext <- tolower(file_ext(target))
+
+  target_file <- file.path(target_dir, basename(target))
+  file.rename(target, target_file)
+  stopifnot(file_test("-f", target_file))
+
+  if (ext == "pdf") {
+    ## Create mockup Rmarkdown file
+    rmd <- file.path(target_dir, paste(name, ".Rmd", sep = ""))
+
+    content <- sprintf('<!--- <iframe src="%s"/> -->', basename(target_file))
+    content <- c(content, sprintf('Vignette: [PDF](%s){target="_blank"} (%s)', basename(target_file), file_size(target_file)))
+    content <- c(content, sprintf('<iframe src="%s" width="100%%" height="1000"/>', basename(target_file)))
+    
+    local({
+      con <- file(rmd, open = "w+")
+      on.exit(close(con))
+      cat("---\n", file = con)
+      write_yaml(yaml, file = con)
+      cat("---\n", file = con)
+      writeLines(content, con = con)
+    })
+    content <- yaml <- NULL
+    
+    pkgdown_file <- file.path(target_dir, basename(rmd))
+    pkgdown_file_short <- file.path(basename(dirname(pkgdown_file)), basename(pkgdown_file))
+    cat_line("Writing ", dst_path(pkgdown_file_short))
+    stopifnot(file_test("-f", pkgdown_file))
+    return(pkgdown_file)
+  }
+  
+  cat_line("Unsupported ", sQuote(paste0(engine$package, "::", engine$name)), " format ", src_path(file_short))
+
+  NA_character_
 }
