@@ -97,6 +97,22 @@ pkgdown_shim_vignettes <- function(path = ".", ...) {
           # No longer needed
           file.remove(target)
           stopifnot(!file_test("-f", target))
+
+          ## 'pkgdown' will create a top ("H1") header with the title 'title'.
+          ## It is likely that the *.md.rsp vignette already has such a top
+          ## header with the same title.  That will result in duplicated
+          ## titles at the top of the 'pkgdown' article.
+          ## Drop top Markdown ("H1") header if it has the same title as the
+          ## vignette (ignoring case).
+          idx <- grep("^#[^#]", content)
+          if (length(idx) > 0) {
+            header <- sub("^#[[:space:]]+", "", content[idx[1]])
+            header <- trim(header)
+            if (tolower(header) == tolower(yaml$title)) {
+              content <- content[-idx]
+            }
+          }
+
           local({
             con <- file(rmd, open = "w+")
             on.exit(close(con))
