@@ -1,5 +1,9 @@
 #' Build a complete 'pkgdown' website
 #'
+#' @details
+#' This function is an enhancement to [pkgdown::build_site()] with the
+#' same name.
+#'
 #' @param pkg Path to package.
 #'
 #' @param \ldots ... Additional arguments passed to [pkgdown::build_site()].
@@ -14,7 +18,7 @@
 #' @importFrom tools pkgVignettes vignetteEngine file_path_sans_ext file_ext
 #' @importFrom yaml write_yaml
 #' @export
-pkgdown_build_site <- function(pkg = ".", ..., preview = NA) {
+build_site <- function(pkg = ".", ..., preview = NA) {
   rule <- import_from("pkgdown", "rule")
   cat_line <- import_from("pkgdown", "cat_line")
   src_path <- import_from("pkgdown", "src_path")
