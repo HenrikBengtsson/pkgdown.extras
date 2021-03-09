@@ -32,8 +32,10 @@ pkgdown_shim_vignettes <- function(path = ".", ...) {
     stopifnot(file_test("-d", dir))
     opwd2 <- setwd(dir)
 
+    old_options <- options()
+    on.exit(options(old_options), add = TRUE)
+    
     shim_docs <- rep(NA_character_, times = nvignettes)
-
     for (kk in seq_len(nvignettes)) {
       name <- vignettes$names[kk]
       file <- vignettes$docs[kk]
@@ -66,6 +68,9 @@ pkgdown_shim_vignettes <- function(path = ".", ...) {
       target_dir <- dirname(file)
       target_file <- file_path_sans_ext(file)
       target_ext <- file_ext(target_file)
+
+      ## In case R options where changed by other vignettes
+      options(old_options)
 
       ## Special cases
       if (engine_name == "R.rsp::rsp" && ext == "rsp") {
