@@ -9,7 +9,7 @@ pkgdown_shim_vignettes <- function(path = ".", ...) {
   dst_path <- import_from("pkgdown", "dst_path")
   get_vignette_metadata <- import_from("tools", ".get_vignette_metadata")
   find_vignette_product <- import_from("tools", "find_vignette_product")
-
+  
   stopifnot(file_test("-d", path))
   opwd <- setwd(path)
   on.exit(setwd(opwd), add = TRUE)
@@ -211,13 +211,14 @@ Rmd_shim_selfonly <- function(file, yaml, engine) {
 
 # Turn an vignette and its product into an Rmarkdown *.Rmd vignette
 # Currently only PDFs are supported. HTML produces is on the to-do list.
-#' @importFrom tools file_path_sans_ext file_ext
+#' @importFrom tools file_path_sans_ext file_ext texi2pdf
 #' @importFrom yaml write_yaml
 Rmd_shim_generic <- function(file, yaml, engine) {
   cat_line <- import_from("pkgdown", "cat_line")
   src_path <- import_from("pkgdown", "src_path")
   dst_path <- import_from("pkgdown", "dst_path")
   find_vignette_product <- import_from("tools", "find_vignette_product")
+  vignette_is_tex <- import_from("tools", "vignette_is_tex")
   
   target_dir <- dirname(file)
   target_file <- file_path_sans_ext(file)
@@ -239,12 +240,18 @@ Rmd_shim_generic <- function(file, yaml, engine) {
     file.path(getwd(), find_vignette_product(name, by = "weave", engine = engine, dir = "."))
   })
   stopifnot(file_test("-f", target))
+
+  ## Compile TeX?
+  if (vignette_is_tex(target)) {
+    texi2pdf(file = target, clean = FALSE, quiet = TRUE)
+    target <- find_vignette_product(name, by = "texi2pdf", engine = engine, dir = ".")
+  }
+
   ext <- tolower(file_ext(target))
 
   target_file <- file.path(target_dir, basename(target))
   file.rename(target, target_file)
   stopifnot(file_test("-f", target_file))
-
 
   if (ext == "html") {
     ## Create mockup Rmarkdown file
@@ -296,7 +303,7 @@ Rmd_shim_generic <- function(file, yaml, engine) {
     return(pkgdown_file)
   }
   
-  cat_line("Unsupported ", sQuote(paste0(engine$package, "::", engine$name)), " format ", src_path(file_short))
+  cat_line("Unsupported output format ", sQuote(ext), " by vignette engine ", sQuote(paste0(engine$package, "::", engine$name)), " from ", src_path(file_short))
 
   NA_character_
 }
