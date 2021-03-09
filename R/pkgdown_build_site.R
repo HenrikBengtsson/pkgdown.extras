@@ -66,6 +66,24 @@ pkgdown_build_site <- function(pkg = ".", ..., preview = NA) {
     stopifnot(file_test("-f", target_path))
   }
 
+  ## Convert NEWS to NEWS.md?
+  shim_news <- FALSE
+  target_path <- file.path(build_path, c("NEWS.md", "inst/NEWS.md"))
+  target_path <- target_path[file_test("-f", target_path)]
+  if (length(target_path) == 0) {
+    news_path <- c("NEWS", "inst/NEWS")
+    news_path <- news_path[file_test("-f", file.path(pkg, news_path))]
+    if (length(news_path) >= 1) {
+      news_path <- news_path[1]
+      cat_line("Reading NEWS file ", src_path(news_path))
+      news_to_md(pkg = pkg, input = news_path, output = file.path(build_path, "NEWS.md"), style = "pkgdown")
+      cat_line("Writing NEWS.md file ", dst_path("NEWS.md"))
+      stopifnot(file_test("-f", file.path(build_path, "NEWS.md")))
+      shim_news <- TRUE
+      attr(shim_news, "source") <- news_path
+    }
+  }
+
   pkgdown_path <- file.path(pkg, "pkgdown")
   if (file_test("-d", pkgdown_path)) {
     cat_line("Copying pkgdown folder ", src_path("pkgdown/"))
@@ -89,7 +107,7 @@ pkgdown_build_site <- function(pkg = ".", ..., preview = NA) {
 
   ## Fix up any references to the shim Rmarkdown files
   if (!is.null(vignettes)) {
-    rule("Unshimming package articles")
+    rule("Unshimming article sources")
     for (kk in seq_along(vignettes$docs)) {
       name <- vignettes$names[kk]
       shim_file <- basename(vignettes$shim_docs[kk])
@@ -105,9 +123,21 @@ pkgdown_build_site <- function(pkg = ".", ..., preview = NA) {
       search <- sprintf("vignettes/%s", shim_file)
       replace <- sprintf("vignettes/%s", file)
       content <- gsub(search, replace, content)
-      
       writeLines(content, con = article_file)
     }
+  }
+
+  if (shim_news) {
+    rule("Unshimming ChangeLog source")
+    news_path <- file.path("docs", "news")
+    news_file <- file.path(news_path, "index.html")
+    cat_line("Updating ", dst_path(news_file))
+    stopifnot(file_test("-d", news_path), file_test("-f", news_file))
+    content <- readLines(news_file)
+    search <- sprintf("NEWS[.]md")
+    replace <- attr(shim_news, "source")
+    content <- gsub(search, replace, content)
+    writeLines(content, con = news_file)
   }
 
   setwd(opwd)

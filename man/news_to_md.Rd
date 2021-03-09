@@ -10,7 +10,7 @@ news_to_md(
   output = "NEWS.md",
   overwrite = FALSE,
   package = NULL,
-  style = c("NEWS", "tidyverse"),
+  style = c("NEWS", "pkgdown"),
   category_case = c("TitleCase", "as-is"),
   escape = TRUE
 )

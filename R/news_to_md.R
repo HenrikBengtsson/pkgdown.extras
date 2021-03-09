@@ -23,7 +23,7 @@
 #' @importFrom utils file_test
 #' @importFrom tools toTitleCase
 #' @export
-news_to_md <- function(pkg = ".", input = "NEWS", output = "NEWS.md", overwrite = FALSE, package = NULL, style = c("NEWS", "tidyverse"), category_case = c("TitleCase", "as-is"), escape = TRUE) {
+news_to_md <- function(pkg = ".", input = "NEWS", output = "NEWS.md", overwrite = FALSE, package = NULL, style = c("NEWS", "pkgdown"), category_case = c("TitleCase", "as-is"), escape = TRUE) {
   toTitleCase <- tools::toTitleCase
   news_reader_default <- import_from("tools", ".news_reader_default")
   
@@ -77,11 +77,11 @@ news_to_md <- function(pkg = ".", input = "NEWS", output = "NEWS.md", overwrite 
 
     if (style == "NEWS") {
       header <- sprintf("## Version %s", version)
-    } else if (style == "tidyverse") {
+    } else if (style == "pkgdown") {
       header <- sprintf("# %s %s", package, version)
     }
     
-    if (nzchar(date)) {
+    if (nzchar(date) && style != "pkgdown") {
       header <- sprintf("%s [%s]", header, date)
     }
 
@@ -135,7 +135,7 @@ news_to_md <- function(pkg = ".", input = "NEWS", output = "NEWS.md", overwrite 
 
   if (style == "NEWS") {
     header <- sprintf("# Package %s", sQuote(package))
-  } else if (style == "tidyverse") {
+  } else if (style == "pkgdown") {
     header <- NULL
   }
 
