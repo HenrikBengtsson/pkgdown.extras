@@ -14,7 +14,7 @@
 #'
 #' @importFrom desc desc_get_field
 #' @importFrom pkgbuild build
-#' @importFrom utils file_test untar
+#' @importFrom utils file_test untar packageVersion
 #' @importFrom tools pkgVignettes vignetteEngine file_path_sans_ext file_ext
 #' @importFrom yaml write_yaml
 #' @export
@@ -142,6 +142,25 @@ build_site <- function(pkg = ".", ..., preview = NA) {
     replace <- attr(shim_news, "source")
     content <- gsub(search, replace, content)
     writeLines(content, con = news_file)
+  }
+
+  # Mention 'pkgdown.extras' in page footers
+  htmls <- dir("docs", pattern = "[.]html$", full.names = TRUE, recursive = TRUE)
+  search <- "<p>(Site built with .*)</p>"
+  replace <- sprintf("<p>\\1 and <a href=\"https://github.com/HenrikBengtsson/%s/\">%s</a> %s.</p>", .packageName, .packageName, packageVersion(.packageName))
+  warn <- TRUE
+  for (kk in seq_along(htmls)) {
+    html <- htmls[kk]
+    bfr <- readLines(html, warn = FALSE)
+    idxs <- grep(search, bfr)
+    if (length(idxs) == 0) next
+    bfr[idxs] <- gsub(search, replace, bfr[idxs])
+    bfr[idxs] <- gsub(". and ", " and ", bfr[idxs], fixed = TRUE)
+    writeLines(bfr, con = html)
+    warn <- FALSE
+  }
+  if (warn) {
+    warning(sprintf("Failed to mention %s in the pkgdown page footer because we could not identify \"Site built with ...\" in any footer. Please report this to the %s maintainer. Thanks.", .packageName, .packageName))
   }
 
   setwd(opwd)
