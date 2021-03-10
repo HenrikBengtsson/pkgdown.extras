@@ -73,7 +73,9 @@ news_to_md <- function(pkg = ".", input = "NEWS", output = "NEWS.md", overwrite 
     stopifnot(length(version) == 1L)
     
     date <- unique(release$Date)
-    stopifnot(length(date) == 1L)
+    if (length(date) > 1L) {
+      stop(sprintf("Syntax error in NEWS: Release version %s has more than one date: %s", sQuote(version), commaq(date)))
+    }
 
     if (style == "NEWS") {
       header <- sprintf("## Version %s", version)
