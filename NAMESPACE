@@ -2,6 +2,7 @@
 
 export(build_site)
 export(news_to_md)
+importFrom(R.utils,CmdArgsFunction)
 importFrom(desc,desc_get_field)
 importFrom(fs,file_size)
 importFrom(pkgbuild,build)
