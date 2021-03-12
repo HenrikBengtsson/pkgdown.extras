@@ -130,6 +130,8 @@ news_to_md <- function(pkg = ".", input = "NEWS", output = "NEWS.md", overwrite 
         texts <- gsub("_", "\\_", texts, fixed = TRUE)
         texts <- gsub("*", "\\*", texts, fixed = TRUE)
         texts <- gsub("`", "\\`", texts, fixed = TRUE)
+        texts <- gsub("<", "&lt;", texts, fixed = TRUE)
+        texts <- gsub(">", "&gt;", texts, fixed = TRUE)
       }
 
       items <- sprintf("* %s", texts)
