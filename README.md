@@ -16,7 +16,7 @@ From R:
 From the command line:
 
 ```sh
-Rscript -e pkgdown.extras::build_site
+$ Rscript -e pkgdown.extras::build_site
 ```
 
 
