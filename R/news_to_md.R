@@ -143,6 +143,11 @@ news_to_md <- function(pkg = ".", input = "NEWS", output = "NEWS.md", overwrite 
         texts <- gsub("`", "\\`", texts, fixed = TRUE)
         texts <- gsub("<", "&lt;", texts, fixed = TRUE)
         texts <- gsub(">", "&gt;", texts, fixed = TRUE)
+        ## (1), (2), ..., (a), (b), ..., (i), (ii), ...
+        for (pattern in c("[(]([[:digit:]]+)[)]", "[(]([[:alpha:]]+)[)]",
+                          "[(]([ivxlcdm:]+)[)]")) {
+          texts <- gsub(pattern, "&#40;\\1&#41;", texts, ignore.case = TRUE)
+        }
       }
 
       items <- sprintf("* %s", texts)
