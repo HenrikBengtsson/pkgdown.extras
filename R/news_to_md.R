@@ -18,12 +18,15 @@
 #' @param escape If TRUE, symbols that have special meaning in Markdown are
 #' escaped.
 #'
+#' @param verbose If TRUE, a summary of the parsed \file{NEWS} file is
+#' outputted.  This can be useful to identify mistypes category titles.
+#'
 #' @return (invisible) The Markdown output.
 #'
 #' @importFrom utils file_test
 #' @importFrom tools toTitleCase
 #' @export
-news_to_md <- function(pkg = ".", input = "NEWS", output = "NEWS.md", overwrite = FALSE, package = NULL, style = c("NEWS", "pkgdown"), category_case = c("TitleCase", "as-is"), escape = TRUE) {
+news_to_md <- function(pkg = ".", input = "NEWS", output = "NEWS.md", overwrite = FALSE, package = NULL, style = c("NEWS", "pkgdown"), category_case = c("TitleCase", "as-is"), escape = TRUE, verbose = FALSE) {
   toTitleCase <- tools::toTitleCase
   news_reader_default <- import_from("tools", ".news_reader_default")
   
@@ -66,6 +69,14 @@ news_to_md <- function(pkg = ".", input = "NEWS", output = "NEWS.md", overwrite 
   ## Preserve order according to NEWS
   if (length(releases) > 1) {
     releases <- releases[unique(news$Version)]
+  }
+
+
+  ## Output a summary?
+  if (verbose) {
+    message("Number of releases: ", length(releases))
+    message("Versions: ", commaq(unique(news$Version)))
+    message("Categories: ", commaq(sort(unique(news$Category))))
   }
 
   mds <- lapply(releases, FUN = function(release) {

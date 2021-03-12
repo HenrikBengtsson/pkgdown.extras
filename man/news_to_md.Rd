@@ -12,7 +12,8 @@ news_to_md(
   package = NULL,
   style = c("NEWS", "pkgdown"),
   category_case = c("TitleCase", "as-is"),
-  escape = TRUE
+  escape = TRUE,
+  verbose = FALSE
 )
 }
 \arguments{
@@ -33,6 +34,9 @@ from the \file{DESCRIPTION} file.}
 
 \item{escape}{If TRUE, symbols that have special meaning in Markdown are
 escaped.}
+
+\item{verbose}{If TRUE, a summary of the parsed \file{NEWS} file is
+outputted.  This can be useful to identify mistypes category titles.}
 }
 \value{
 (invisible) The Markdown output.
