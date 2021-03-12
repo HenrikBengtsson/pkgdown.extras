@@ -24,13 +24,13 @@ This will build the full pkgdown website in a temporary folder and copy the resu
 
 1. Create a pruned copy of the package folder in a temporary folder by:
 
-  a. Build a package tarball via `R CMD build --no-build-vignettes`
+   a. Build a package tarball via `R CMD build --no-build-vignettes`
   
-  b. Extra tarball into temporary folder
+   b. Extra tarball into temporary folder
 
-  c. Copy all of the man/ folder to temporary folder in case `.Rbuildignore` drops for instance `man/figures/` files
+   c. Copy all of the man/ folder to temporary folder in case `.Rbuildignore` drops for instance `man/figures/` files
 
-  d. Copy all `*.md` files in the package root to the temporary folder
+   d. Copy all `*.md` files in the package root to the temporary folder
   
 2. "shim" any `NEWS` (or `inst/NEWS`) file to a `NEWS.md` file that is recognized by **pkgdown**.  The result is that the NEWS entries are rendered nicely in the 'ChangeLog' menu created by **pkgdown**.  (Function `news_to_md()` can be used to manually generate a `NEWS.md` file from a `NEWS` file)
 
