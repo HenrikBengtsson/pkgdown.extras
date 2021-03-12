@@ -22,9 +22,19 @@ $ Rscript -e pkgdown.extras::build_site
 
 This will build the full pkgdown website in a temporary folder and copy the results to the `docs/` folder in the current working directory.  When building the website, the above function will:
 
-1. "shim" any `NEWS` (or `inst/NEWS`) file to a `NEWS.md` file that is recognized by **pkgdown**.  The result is that the NEWS entries are rendered nicely in the 'ChangeLog' menu created by **pkgdown**.  (Function `news_to_md()` can be used to manually generate a `NEWS.md` file from a `NEWS` file)
+1. Create a pruned copy of the package folder in a temporary folder by:
 
-2. shim non-Rmarkdown vignettes, which are silently ignored by **pkgdown**, into Rmarkdown vignettes.  This is achieved by weaving the vignette using the vignette engine that the vignette declares, which results in either a HTML or a PDF vignette product.  For PDFs, a shim Rmarkdown vignette, which will both provide a link to the PDF as well as including it in an `<iframe>`, is created on-the-fly so **pkgdown** incorporates the vignette.  HTML documents are automatically added to the 'Articles' menu by **pkgdown**; when clicking on those in the menu, the vignette will be opened in a separate browser tab.
+  a. Build a package tarball via `R CMD build --no-build-vignettes`
+  
+  b. Extra tarball into temporary folder
+
+  c. Copy all of the man/ folder to temporary folder in case `.Rbuildignore` drops for instance `man/figures/` files
+
+  d. Copy all `*.md` files in the package root to the temporary folder
+  
+2. "shim" any `NEWS` (or `inst/NEWS`) file to a `NEWS.md` file that is recognized by **pkgdown**.  The result is that the NEWS entries are rendered nicely in the 'ChangeLog' menu created by **pkgdown**.  (Function `news_to_md()` can be used to manually generate a `NEWS.md` file from a `NEWS` file)
+
+3. shim non-Rmarkdown vignettes, which are silently ignored by **pkgdown**, into Rmarkdown vignettes.  This is achieved by weaving the vignette using the vignette engine that the vignette declares, which results in either a HTML or a PDF vignette product.  For PDFs, a shim Rmarkdown vignette, which will both provide a link to the PDF as well as including it in an `<iframe>`, is created on-the-fly so **pkgdown** incorporates the vignette.  HTML documents are automatically added to the 'Articles' menu by **pkgdown**; when clicking on those in the menu, the vignette will be opened in a separate browser tab.
 
 For all shimmed documents, any "Source: &lt;link&gt;" is adjusted such that it links to the proper source.
 

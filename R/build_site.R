@@ -62,12 +62,22 @@ build_site <- function(pkg = ".", ..., preview = NA) {
     }
   }
 
+  ## Copy man/
+  pkgdown_path <- file.path(pkg, "man")
+  if (file_test("-d", pkgdown_path)) {
+    cat_line("Copying pkgdown folder ", src_path("man"))
+    file.copy(pkgdown_path, build_path, recursive = TRUE)
+    target_path <- file.path(build_path, "man")
+    stopifnot(file_test("-d", target_path))
+  }
+
+  ## Copy all *.md files
   for (file in dir(path = pkg, pattern = "[.]md$")) {
     pkgdown_path <- file.path(pkg, file)
     target_path <- file.path(build_path, file)
     if (file_test("-f", pkgdown_path) && !file_test("-f", target_path)) {
       cat_line("Copying file ", src_path(file))
-      file.copy(pkgdown_path, build_path, recursive = TRUE)
+      file.copy(pkgdown_path, build_path)
       stopifnot(file_test("-f", target_path))
     }
   }
@@ -97,7 +107,7 @@ build_site <- function(pkg = ".", ..., preview = NA) {
     target_path <- file.path(build_path, "pkgdown")
     stopifnot(file_test("-d", target_path))
   }
-  
+
   opwd <- setwd(build_path)
   on.exit(setwd(opwd), add = TRUE)
 
