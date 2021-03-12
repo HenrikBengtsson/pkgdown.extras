@@ -99,6 +99,13 @@ news_to_md <- function(pkg = ".", input = "NEWS", output = "NEWS.md", overwrite 
       title <- unique(category$Category)
       stopifnot(length(title) == 1L)
 
+      pattern <- "[:]?[[:space:]]+$"
+      if (grepl(pattern, title)) {
+        title0 <- title
+        title <- sub(pattern, "", title)
+        warning("Dropped trailing spaces in category ", sQuote(title), " after the colon for version ", version, ": ", sQuote(title0), call. = FALSE)
+      }
+      
       if (category_case == "TitleCase") {
         title <- tolower(title)
         title <- toTitleCase(title)
