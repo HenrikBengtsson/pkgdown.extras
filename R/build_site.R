@@ -82,6 +82,20 @@ build_site <- function(pkg = ".", ..., preview = NA) {
     }
   }
 
+  ## Prune README.md
+  file <- file.path(build_path, "README.md")
+  if (file_test("-f", file)) {
+    cat_line("Pruning file ", dst_path(basename(file)))
+    bfr <- readLines(file, warn = FALSE)
+    pattern <- "<!-- pkgdown-drop-below -->"
+    idx <- grep(pattern, bfr)[1]
+    if (!is.na(idx)) {
+      bfr <- bfr[seq_len(idx-1)]
+      writeLines(bfr, con = file)
+    }
+    stopifnot(file_test("-f", file))
+  }
+
   ## Convert NEWS to NEWS.md?
   shim_news <- FALSE
   target_path <- file.path(build_path, c("NEWS.md", "inst/NEWS.md"))
@@ -113,6 +127,7 @@ build_site <- function(pkg = ".", ..., preview = NA) {
 
   ## Shim vignettes
   vignettes <- pkgdown_shim_vignettes()
+
 
   pkgdown::build_site(pkg = ".", ..., preview = FALSE)
   docs_path <- "docs"
