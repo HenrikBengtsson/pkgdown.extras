@@ -8,6 +8,8 @@
 #'
 #' @param \ldots ... Additional arguments passed to [pkgdown::build_site()].
 #'
+#' @param github If TRUE, GitHub specific files are created, e.g. CNAME.
+#'
 #' @param preview Preview site in browser?
 #'
 #' @returns Nothing.
@@ -18,11 +20,12 @@
 #' @importFrom tools pkgVignettes vignetteEngine file_path_sans_ext file_ext
 #' @importFrom yaml write_yaml
 #' @export
-build_site <- function(pkg = ".", ..., preview = NA) {
+build_site <- function(pkg = ".", ..., github = TRUE, preview = NA) {
   rule <- import_from("pkgdown", "rule")
   cat_line <- import_from("pkgdown", "cat_line")
   src_path <- import_from("pkgdown", "src_path")
   dst_path <- import_from("pkgdown", "dst_path")
+  build_github_pages <- import_from("pkgdown", "build_github_pages")
   preview_site <- import_from("pkgdown", "preview_site")
   oopts <- options(width = 80L)
   on.exit(options(oopts))
@@ -124,6 +127,11 @@ build_site <- function(pkg = ".", ..., preview = NA) {
 
   opwd <- setwd(build_path)
   on.exit(setwd(opwd), add = TRUE)
+
+  ## GitHub specific files, e.g. CNAME
+  if (github) {
+    build_github_pages()
+  }
 
   ## Shim vignettes
   vignettes <- pkgdown_shim_vignettes()

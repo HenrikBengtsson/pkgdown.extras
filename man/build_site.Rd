@@ -4,10 +4,12 @@
 \alias{build_site}
 \title{Build a complete 'pkgdown' website}
 \usage{
-build_site(pkg = ".", ..., preview = NA)
+build_site(pkg = ".", ..., github = TRUE, preview = NA)
 }
 \arguments{
 \item{pkg}{Path to package.}
+
+\item{github}{If TRUE, GitHub specific files are created, e.g. CNAME.}
 
 \item{preview}{Preview site in browser?}
 
