@@ -128,11 +128,6 @@ build_site <- function(pkg = ".", ..., github = TRUE, preview = NA) {
   opwd <- setwd(build_path)
   on.exit(setwd(opwd), add = TRUE)
 
-  ## GitHub specific files, e.g. CNAME
-  if (github) {
-    build_github_pages()
-  }
-
   ## Shim vignettes
   vignettes <- pkgdown_shim_vignettes()
 
@@ -141,6 +136,11 @@ build_site <- function(pkg = ".", ..., github = TRUE, preview = NA) {
   docs_path <- "docs"
   stopifnot(file_test("-d", docs_path))
 
+  ## GitHub specific files, e.g. CNAME
+  if (github) {
+    rule("Build GitHub-specific files", line = "=")
+    build_github_pages()
+  }
 
   rule("Postprocess package for pkgdown", line = "=")
 
