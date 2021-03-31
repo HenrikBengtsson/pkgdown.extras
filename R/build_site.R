@@ -36,6 +36,9 @@ build_site <- function(pkg = ".", ..., github = TRUE, preview = NA) {
 
   rule("Preprocessing package for pkgdown", line = "=")
 
+  ## Compile _pkgdown.yml.rsp, if it exists
+  build_pkgdown_yml()
+
   build_root <- tempdir()
   build_path <- file.path(build_root, pkgname)
   
