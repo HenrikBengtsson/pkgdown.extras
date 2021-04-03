@@ -160,11 +160,19 @@ build_site <- function(pkg = ".", ..., github = TRUE, preview = NA) {
       stopifnot(file_test("-f", article_file))
       content <- readLines(article_file)
 
-      ## Vignette source links
       file <- basename(vignettes$docs[kk])
-      search <- sprintf("vignettes/%s", shim_file)
-      replace <- sprintf("vignettes/%s", file)
-      content <- gsub(search, replace, content)
+      
+      ## Vignette source links (two parts)
+      fmtstr <- "vignettes/%s"
+      search <- sprintf(fmtstr, shim_file)
+      replace <- sprintf(fmtstr, file)
+      content <- gsub(search, replace, content, fixed = TRUE)
+      
+      fmtstr <- '<div class="hidden name"><code>%s</code></div>'
+      search <- sprintf(fmtstr, shim_file)
+      replace <- sprintf(fmtstr, file)
+      content <- gsub(search, replace, content, fixed = TRUE)
+      
       writeLines(content, con = article_file)
     }
   }
