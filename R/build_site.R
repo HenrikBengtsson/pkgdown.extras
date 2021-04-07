@@ -18,7 +18,7 @@
 #' @importFrom pkgbuild build
 #' @importFrom utils file_test untar packageVersion
 #' @importFrom tools pkgVignettes vignetteEngine file_path_sans_ext file_ext
-#' @importFrom yaml write_yaml
+#' @importFrom yaml read_yaml write_yaml
 #' @export
 build_site <- function(pkg = ".", ..., github = TRUE, preview = NA) {
   rule <- import_from("pkgdown", "rule")
@@ -37,7 +37,8 @@ build_site <- function(pkg = ".", ..., github = TRUE, preview = NA) {
   rule("Preprocessing package for pkgdown", line = "=")
 
   ## Compile _pkgdown.yml.rsp, if it exists
-  build_pkgdown_yml()
+  pathname_yml <- build_pkgdown_yml()
+  config <- if (is.null(pathname_yml)) NULL else read_yaml(pathname_yml)
 
   build_root <- tempdir()
   build_path <- file.path(build_root, pkgname)
@@ -208,6 +209,34 @@ build_site <- function(pkg = ".", ..., github = TRUE, preview = NA) {
   if (warn) {
     warning(sprintf("Failed to mention %s in the pkgdown page footer because we could not identify \"Site built with ...\" in any footer. Please report this to the %s maintainer. Thanks.", .packageName, .packageName))
   }
+
+  # Update docsearch settings?
+  docsearch <- config$template$params$docsearch
+  if (length(docsearch) > 0) {
+    if ("algoliaOptions" %in% names(docsearch)) {
+      ## AD HOC: with read_yaml() -> as.yaml() we're losing critical yaml formatting
+      ## Instead, bring in the raw string from the '_pkgdown.yml' file
+      value <- grep("[[:space:]]*algoliaOptions:", readLines(pathname_yml), value = TRUE)
+      ## Validate that we've go a single valid line
+      expr <- tryCatch(read_yaml(text = value), error = identity)
+      if (inherits(expr, "error")) {
+        stop("The docsearch 'algoliaOptions' entry in the _pkgdown.yml file must be parsable and on a single line")
+      }
+      inject <- gsub("(^[[:space:]]+|[[:space:]]+$)", "", value)
+      stopifnot(length(inject) == 1L, is.character(inject), !is.na(inject), nzchar(inject))
+      htmls <- dir("docs", pattern = "[.]html$", full.names = TRUE, recursive = TRUE)
+      search <- "^(([[:space:]]*)indexName:[[:space:]]*'[[:alnum:].]+',)[[:space:]]*$"
+      replace <- sprintf("\\1\n\\2%s,", inject)
+      for (kk in seq_along(htmls)) {
+        html <- htmls[kk]
+        bfr <- readLines(html, warn = FALSE)
+        idxs <- grep(search, bfr)
+        if (length(idxs) == 0) next
+        bfr[idxs] <- gsub(search, replace, bfr[idxs])
+        writeLines(bfr, con = html)
+      }
+    } ## if (length(value) > 1)
+  } ## if (length(docsearch) > 0)
 
   setwd(opwd)
   docs_path <- file.path(build_path, "docs")
