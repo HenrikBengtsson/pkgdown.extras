@@ -203,6 +203,7 @@ build_site <- function(pkg = ".", ..., github = TRUE, preview = NA) {
     if (length(idxs) == 0) next
     bfr[idxs] <- gsub(search, replace, bfr[idxs])
     bfr[idxs] <- gsub(". and ", " and ", bfr[idxs], fixed = TRUE)
+    bfr[idxs] <- gsub(".</p> and ", "</p> and ", bfr[idxs], fixed = TRUE)
     writeLines(bfr, con = html)
     warn <- FALSE
   }
