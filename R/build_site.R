@@ -29,10 +29,10 @@ build_site <- function(pkg = ".", ..., github = TRUE, preview = NA) {
   preview_site <- import_from("pkgdown", "preview_site")
   oopts <- options(width = 80L)
   on.exit(options(oopts))
-  
+
   stopifnot(file_test("-d", pkg))
 
-  pkgname <- desc_get_field("Package")
+  pkgname <- desc_get_field("Package", file = pkg)
 
   rule("Preprocessing package for pkgdown", line = "=")
 
@@ -42,7 +42,7 @@ build_site <- function(pkg = ".", ..., github = TRUE, preview = NA) {
 
   build_root <- tempdir()
   build_path <- file.path(build_root, pkgname)
-  
+
   cat_line("Create shim package folder ", dst_path(build_path))
   tarball <- pkgbuild::build(
     path = pkg,
@@ -155,25 +155,25 @@ build_site <- function(pkg = ".", ..., github = TRUE, preview = NA) {
       name <- vignettes$names[kk]
       shim_file <- basename(vignettes$shim_docs[kk])
       if (is.na(shim_file)) next  ## Not shimmed
-      
+
       article_file <- file.path("docs", "articles", sprintf("%s.html", name))
       cat_line("Updating ", dst_path(article_file))
       stopifnot(file_test("-f", article_file))
       content <- readLines(article_file)
 
       file <- basename(vignettes$docs[kk])
-      
+
       ## Vignette source links (two parts)
       fmtstr <- "vignettes/%s"
       search <- sprintf(fmtstr, shim_file)
       replace <- sprintf(fmtstr, file)
       content <- gsub(search, replace, content, fixed = TRUE)
-      
+
       fmtstr <- '<div class="hidden name"><code>%s</code></div>'
       search <- sprintf(fmtstr, shim_file)
       replace <- sprintf(fmtstr, file)
       content <- gsub(search, replace, content, fixed = TRUE)
-      
+
       writeLines(content, con = article_file)
     }
   }
@@ -250,6 +250,6 @@ build_site <- function(pkg = ".", ..., github = TRUE, preview = NA) {
     file.rename(docs_path, "docs")
     stopifnot(file_test("-d", "docs"))
   })
-  
+
   preview_site(pkg = pkg, preview = preview)
 }
