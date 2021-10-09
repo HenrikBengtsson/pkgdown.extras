@@ -244,7 +244,7 @@ build_site <- function(pkg = ".", ..., github = TRUE, preview = NA) {
   stopifnot(file_test("-d", docs_path))
 
   local({
-    opwd <- setwd(pkg)
+    opwd <- setwd(opwd)
     on.exit(setwd(opwd))
     if (file_test("-d", "docs")) unlink("docs", recursive = TRUE)
     file.rename(docs_path, "docs")
