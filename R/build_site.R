@@ -155,9 +155,11 @@ build_site <- function(pkg = ".", ..., github = TRUE, preview = NA) {
       name <- vignettes$names[kk]
       shim_file <- basename(vignettes$shim_docs[kk])
       if (is.na(shim_file)) next  ## Not shimmed
-      
-      article_file <- file.path("docs", "articles", sprintf("%s.html", name))
+
+      articles_path <- file.path("docs", "articles")
+      article_file <- file.path(articles_path, sprintf("%s.html", name))
       cat_line("Updating ", dst_path(article_file))
+      stopifnot(file_test("-d", articles_path))
       stopifnot(file_test("-f", article_file))
       content <- readLines(article_file)
 
