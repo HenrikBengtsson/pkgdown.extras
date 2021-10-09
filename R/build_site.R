@@ -89,6 +89,18 @@ build_site <- function(pkg = ".", ..., github = TRUE, preview = NA) {
     }
   }
 
+  ## Copy README.md, index.md to build_path if necessary
+  if (pkg != ".") {
+    for (file in dir(path = ".", pattern = "(index|README).md$")) {
+      target_path <- file.path(build_path, file)
+      if (file_test("-f", file) && !file_test("-f", target_path)) {
+        cat_line("Copying file ",file)
+        file.copy(file, build_path)
+        stopifnot(file_test("-f", target_path))
+      }
+    }
+  }
+
   ## Prune README.md
   file <- file.path(build_path, "README.md")
   if (file_test("-f", file)) {
