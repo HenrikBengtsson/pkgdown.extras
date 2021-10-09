@@ -61,7 +61,7 @@ build_site <- function(pkg = ".", ..., github = TRUE, preview = NA) {
 
   vignettes_path <- file.path(pkg, "vignettes")
   if (file_test("-d", vignettes_path)) {
-    files <- dir(vignettes_path, pattern = ".pdf$", ignore.case = TRUE, full.names = TRUE)
+    files <- dir(vignettes_path, pattern = "[.]pdf$", ignore.case = TRUE, full.names = TRUE)
     for (file in files) {
       cat_line("Copying vignette file ", src_path(file))
       file.copy(file, file.path(build_path, file))
