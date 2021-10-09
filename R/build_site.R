@@ -105,9 +105,19 @@ build_site <- function(pkg = ".", ..., github = TRUE, preview = NA) {
 
   ## Convert NEWS to NEWS.md?
   shim_news <- FALSE
-  target_path <- file.path(build_path, c("NEWS.md", "inst/NEWS.md"))
-  target_path <- target_path[file_test("-f", target_path)]
-  if (length(target_path) == 0) {
+  news_paths <- c("NEWS.md", "inst/NEWS.md")
+  target_path <- file.path(build_path, news_paths)
+  exists <- which(file_test("-f", target_path))
+  if (length(exists) > 0) {
+    news_path <- news_paths[exists]
+    stopifnot(length(news_path) == 1)
+    md <- prune_news_md(pkg, input = news_path, output = file.path(build_path, news_path))
+    pruned <- attr(md, "pruned")
+    if (pruned) {
+      cat_line("Pruned NEWS.md file ", dst_path(news_path))
+      stopifnot(file_test("-f", file.path(build_path, news_path)))
+    }
+  } else {
     news_path <- c("NEWS", "inst/NEWS")
     news_path <- news_path[file_test("-f", file.path(pkg, news_path))]
     if (length(news_path) >= 1) {
@@ -134,7 +144,6 @@ build_site <- function(pkg = ".", ..., github = TRUE, preview = NA) {
 
   ## Shim vignettes
   vignettes <- pkgdown_shim_vignettes()
-
 
   pkgdown::build_site(pkg = ".", ..., preview = FALSE)
   docs_path <- "docs"
