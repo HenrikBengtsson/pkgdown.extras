@@ -3,6 +3,7 @@
 export(build_pkgdown_yml)
 export(build_site)
 export(news_to_md)
+export(prune_news_md)
 importFrom(R.rsp,rfile)
 importFrom(R.utils,CmdArgsFunction)
 importFrom(desc,desc_get_field)

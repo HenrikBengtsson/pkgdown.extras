@@ -59,6 +59,7 @@ build_site <- function(pkg = ".", ..., github = TRUE, preview = NA) {
   stopifnot(res == 0)
   stopifnot(file_test("-d", build_path))
 
+
   cp_pkg_dir <- function(cpdir, pattern = ".*") {
     dir_path <- file.path(pkg, cpdir)
     if (file_test("-d", dir_path)) {
@@ -104,9 +105,19 @@ build_site <- function(pkg = ".", ..., github = TRUE, preview = NA) {
 
   ## Convert NEWS to NEWS.md?
   shim_news <- FALSE
-  target_path <- file.path(build_path, c("NEWS.md", "inst/NEWS.md"))
-  target_path <- target_path[file_test("-f", target_path)]
-  if (length(target_path) == 0) {
+  news_paths <- c("NEWS.md", "inst/NEWS.md")
+  target_path <- file.path(build_path, news_paths)
+  exists <- which(file_test("-f", target_path))
+  if (length(exists) > 0) {
+    news_path <- news_paths[exists]
+    stopifnot(length(news_path) == 1)
+    md <- prune_news_md(pkg, input = news_path, output = file.path(build_path, news_path))
+    pruned <- attr(md, "pruned")
+    if (pruned) {
+      cat_line("Pruned NEWS.md file ", dst_path(news_path))
+      stopifnot(file_test("-f", file.path(build_path, news_path)))
+    }
+  } else {
     news_path <- c("NEWS", "inst/NEWS")
     news_path <- news_path[file_test("-f", file.path(pkg, news_path))]
     if (length(news_path) >= 1) {
@@ -155,8 +166,10 @@ build_site <- function(pkg = ".", ..., github = TRUE, preview = NA) {
       shim_file <- basename(vignettes$shim_docs[kk])
       if (is.na(shim_file)) next  ## Not shimmed
 
-      article_file <- file.path("docs", "articles", sprintf("%s.html", name))
+      articles_path <- file.path("docs", "articles")
+      article_file <- file.path(articles_path, sprintf("%s.html", name))
       cat_line("Updating ", dst_path(article_file))
+      stopifnot(file_test("-d", articles_path))
       stopifnot(file_test("-f", article_file))
       content <- readLines(article_file)
 

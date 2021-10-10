@@ -19,5 +19,5 @@ LazyLoad: TRUE
 ByteCompile: TRUE
 URL: https://github.com/HenrikBengtsson/pkgdown.extras
 BugReports: https://github.com/HenrikBengtsson/pkgdown.extras/issues
-RoxygenNote: 7.1.1
+RoxygenNote: 7.1.2
 Roxygen: list(markdown = TRUE)
