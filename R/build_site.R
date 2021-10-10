@@ -265,5 +265,9 @@ build_site <- function(pkg = ".", ..., github = TRUE, preview = NA) {
   })
 
   ## DON'T use pkg here (docs is in main dir)
-  preview_site(pkg = ".", preview = preview)
+  ## preview_site(pkg = ".", preview = preview)
+  ## preview_site appears to assume that docs are within pkg dir?
+  if (isTRUE(preview) || (is.na(preview) && interactive())) {
+    browseURL("docs/index.html")
+  }
 }
