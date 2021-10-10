@@ -32,7 +32,7 @@ build_site <- function(pkg = ".", ..., github = TRUE, preview = NA) {
   
   stopifnot(file_test("-d", pkg))
 
-  pkgname <- desc_get_field("Package")
+  pkgname <- desc_get_field("Package", file = pkg)
 
   rule("Preprocessing package for pkgdown", line = "=")
 
