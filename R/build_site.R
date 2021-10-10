@@ -59,35 +59,22 @@ build_site <- function(pkg = ".", ..., github = TRUE, preview = NA) {
   stopifnot(res == 0)
   stopifnot(file_test("-d", build_path))
 
-  vignettes_path <- file.path(pkg, "vignettes")
-  if (file_test("-d", vignettes_path)) {
-    files <- dir(vignettes_path, pattern = ".pdf$", ignore.case = TRUE, full.names = TRUE)
-    for (file in files) {
-      cat_line("Copying vignette file ", src_path(file))
-      file.copy(file, file.path(build_path, file))
-      stopifnot(file_test("-f", file.path(build_path, file)))
+  cp_pkg_dir <- function(cpdir, pattern = ".*") {
+    dir_path <- file.path(pkg, cpdir)
+    if (file_test("-d", dir_path)) {
+      ## *Don't* use full.names = TRUE, prepend dir instead
+      files <- file.path(cpdir, dir(dir_path, pattern = pattern, ignore.case = TRUE))
+      for (file in files) {
+        cat_line("Copying file ", src_path(file))
+        file.copy(file.path(pkg, file), file.path(build_path, file))
+        stopifnot(file_test("-f", file.path(build_path, file)))
+      }
     }
   }
 
-  ## Copy man/
-  pkgdown_path <- file.path(pkg, "man")
-  if (file_test("-d", pkgdown_path)) {
-    cat_line("Copying pkgdown folder ", src_path("man"))
-    file.copy(pkgdown_path, build_path, recursive = TRUE)
-    target_path <- file.path(build_path, "man")
-    stopifnot(file_test("-d", target_path))
-  }
-
-  ## Copy all *.md files
-  for (file in dir(path = pkg, pattern = "[.]md$")) {
-    pkgdown_path <- file.path(pkg, file)
-    target_path <- file.path(build_path, file)
-    if (file_test("-f", pkgdown_path) && !file_test("-f", target_path)) {
-      cat_line("Copying file ", src_path(file))
-      file.copy(pkgdown_path, build_path)
-      stopifnot(file_test("-f", target_path))
-    }
-  }
+  cp_pkg_dir("vignettes", pattern = "\\.pdf$")
+  cp_pkg_dir("man", pattern = "\\.Rd$")
+  cp_pkg_dir(".", pattern = "\\.md$")
 
   ## Copy README.md, index.md to build_path if necessary
   if (pkg != ".") {
@@ -147,7 +134,7 @@ build_site <- function(pkg = ".", ..., github = TRUE, preview = NA) {
   ## Shim vignettes
   vignettes <- pkgdown_shim_vignettes()
 
-
+  ## now in build dir ...
   pkgdown::build_site(pkg = ".", ..., preview = FALSE)
   docs_path <- "docs"
   stopifnot(file_test("-d", docs_path))
@@ -263,5 +250,6 @@ build_site <- function(pkg = ".", ..., github = TRUE, preview = NA) {
     stopifnot(file_test("-d", "docs"))
   })
 
-  preview_site(pkg = pkg, preview = preview)
+  ## DON'T use pkg here (docs is in main dir)
+  preview_site(pkg = ".", preview = preview)
 }
