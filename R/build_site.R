@@ -258,8 +258,9 @@ build_site <- function(pkg = ".", ..., github = TRUE, preview = NA) {
   local({
     opwd <- setwd(opwd)
     on.exit(setwd(opwd))
-    if (file_test("-d", "docs")) unlink("docs", recursive = TRUE)
-    file.rename(docs_path, "docs")
+    ## if (file_test("-d", "docs")) unlink("docs", recursive = TRUE)
+    ## file.rename(docs_path, "docs")
+    file.copy(dir(docs_path, full.names=TRUE), "docs", recursive = TRUE, overwrite = TRUE)
     stopifnot(file_test("-d", "docs"))
   })
 
