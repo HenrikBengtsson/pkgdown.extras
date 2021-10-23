@@ -37,7 +37,7 @@ build_site <- function(pkg = ".", ..., github = TRUE, preview = NA) {
   rule("Preprocessing package for pkgdown", line = "=")
 
   ## Compile _pkgdown.yml.rsp, if it exists
-  pathname_yml <- build_pkgdown_yml()
+  pathname_yml <- build_pkgdown_yml(pkg = pkg)
   config <- if (is.null(pathname_yml)) NULL else read_yaml(pathname_yml)
 
   build_root <- tempdir()
@@ -76,6 +76,7 @@ build_site <- function(pkg = ".", ..., github = TRUE, preview = NA) {
   cp_pkg_dir("vignettes", pattern = "\\.pdf$")
   cp_pkg_dir("man", pattern = "\\.Rd$")
   cp_pkg_dir(".", pattern = "\\.md$")
+  cp_pkg_dir(".", pattern = "_pkgdown.y.?ml$")
 
   ## Copy README.md, index.md to build_path if necessary
   if (pkg != ".") {
