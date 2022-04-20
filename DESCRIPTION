@@ -1,5 +1,5 @@
 Package: pkgdown.extras
-Version: 0.0.0-9003
+Version: 0.0.0-9004
 Title: Enhancing the 'pkgdown' Package
 Imports:
     desc,
