@@ -216,7 +216,7 @@ build_site <- function(pkg = ".", ..., github = TRUE, preview = NA) {
     ## If pkgdown and it's version are not on the same line, merge lines
     if (!grepl("</p>", bfr[idx])) {
       if (idx == length(bfr)) next
-      if (!grepl(bfr[idx+1], "</p>")) next
+      if (!grepl("</p>", bfr[idx+1])) next
       bfr[idx] <- paste(bfr[idx + 0:1], collapse = " ")
       bfr[idx+1] <- ""
     }
