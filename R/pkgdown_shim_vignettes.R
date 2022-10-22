@@ -153,7 +153,7 @@ Rmd_shim_md_rsp <- function(file, yaml, engine) {
     header <- sub("^#[[:space:]]+", "", content[idx[1]])
     header <- trim(header)
     if (tolower(header) == tolower(yaml$title)) {
-      content <- content[-idx]
+      content <- content[-idx[1]]
     }
   }
 
