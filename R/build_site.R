@@ -29,7 +29,7 @@ build_site <- function(pkg = ".", ..., github = TRUE, preview = NA) {
   preview_site <- import_from("pkgdown", "preview_site")
   oopts <- options(width = 80L)
   on.exit(options(oopts))
-  
+
   stopifnot(file_test("-d", pkg))
 
   pkgname <- desc_get_field("Package", file = pkg)
@@ -37,12 +37,12 @@ build_site <- function(pkg = ".", ..., github = TRUE, preview = NA) {
   rule("Preprocessing package for pkgdown", line = "=")
 
   ## Compile _pkgdown.yml.rsp, if it exists
-  pathname_yml <- build_pkgdown_yml()
+  pathname_yml <- build_pkgdown_yml(pkg = pkg)
   config <- if (is.null(pathname_yml)) NULL else read_yaml(pathname_yml)
 
   build_root <- tempdir()
   build_path <- file.path(build_root, pkgname)
-  
+
   cat_line("Create shim package folder ", dst_path(build_path))
   tarball <- pkgbuild::build(
     path = pkg,
@@ -59,33 +59,34 @@ build_site <- function(pkg = ".", ..., github = TRUE, preview = NA) {
   stopifnot(res == 0)
   stopifnot(file_test("-d", build_path))
 
-  vignettes_path <- file.path(pkg, "vignettes")
-  if (file_test("-d", vignettes_path)) {
-    files <- dir(vignettes_path, pattern = "[.]pdf$", ignore.case = TRUE, full.names = TRUE)
-    for (file in files) {
-      cat_line("Copying vignette file ", src_path(file))
-      file.copy(file, file.path(build_path, file))
-      stopifnot(file_test("-f", file.path(build_path, file)))
+
+  cp_pkg_dir <- function(cpdir, pattern = ".*") {
+    dir_path <- file.path(pkg, cpdir)
+    if (file_test("-d", dir_path)) {
+      ## *Don't* use full.names = TRUE, prepend dir instead
+      files <- file.path(cpdir, dir(dir_path, pattern = pattern, ignore.case = TRUE))
+      for (file in files) {
+        cat_line("Copying file ", src_path(file))
+        file.copy(file.path(pkg, file), file.path(build_path, file))
+        stopifnot(file_test("-f", file.path(build_path, file)))
+      }
     }
   }
 
-  ## Copy man/
-  pkgdown_path <- file.path(pkg, "man")
-  if (file_test("-d", pkgdown_path)) {
-    cat_line("Copying pkgdown folder ", src_path("man"))
-    file.copy(pkgdown_path, build_path, recursive = TRUE)
-    target_path <- file.path(build_path, "man")
-    stopifnot(file_test("-d", target_path))
-  }
+  cp_pkg_dir("vignettes", pattern = "\\.pdf$")
+  cp_pkg_dir("man", pattern = "\\.Rd$")
+  cp_pkg_dir(".", pattern = "\\.md$")
+  cp_pkg_dir(".", pattern = "_pkgdown.y.?ml$")
 
-  ## Copy all *.md files
-  for (file in dir(path = pkg, pattern = "[.]md$")) {
-    pkgdown_path <- file.path(pkg, file)
-    target_path <- file.path(build_path, file)
-    if (file_test("-f", pkgdown_path) && !file_test("-f", target_path)) {
-      cat_line("Copying file ", src_path(file))
-      file.copy(pkgdown_path, build_path)
-      stopifnot(file_test("-f", target_path))
+  ## Copy README.md, index.md to build_path if necessary
+  if (pkg != ".") {
+    for (file in dir(path = ".", pattern = "(index|README).md$")) {
+      target_path <- file.path(build_path, file)
+      if (file_test("-f", file) && !file_test("-f", target_path)) {
+        cat_line("Copying file ",file)
+        file.copy(file, build_path)
+        stopifnot(file_test("-f", target_path))
+      }
     }
   }
 
@@ -145,6 +146,7 @@ build_site <- function(pkg = ".", ..., github = TRUE, preview = NA) {
   ## Shim vignettes
   vignettes <- pkgdown_shim_vignettes()
 
+  ## now in build dir ...
   pkgdown::build_site(pkg = ".", ..., preview = FALSE)
   docs_path <- "docs"
   stopifnot(file_test("-d", docs_path))
@@ -173,18 +175,18 @@ build_site <- function(pkg = ".", ..., github = TRUE, preview = NA) {
       content <- readLines(article_file)
 
       file <- basename(vignettes$docs[kk])
-      
+
       ## Vignette source links (two parts)
       fmtstr <- "vignettes/%s"
       search <- sprintf(fmtstr, shim_file)
       replace <- sprintf(fmtstr, file)
       content <- gsub(search, replace, content, fixed = TRUE)
-      
+
       fmtstr <- '<div class="hidden name"><code>%s</code></div>'
       search <- sprintf(fmtstr, shim_file)
       replace <- sprintf(fmtstr, file)
       content <- gsub(search, replace, content, fixed = TRUE)
-      
+
       writeLines(content, con = article_file)
     }
   }
@@ -264,12 +266,18 @@ build_site <- function(pkg = ".", ..., github = TRUE, preview = NA) {
   stopifnot(file_test("-d", docs_path))
 
   local({
-    opwd <- setwd(pkg)
+    opwd <- setwd(opwd)
     on.exit(setwd(opwd))
-    if (file_test("-d", "docs")) unlink("docs", recursive = TRUE)
-    file.rename(docs_path, "docs")
+    ## if (file_test("-d", "docs")) unlink("docs", recursive = TRUE)
+    ## file.rename(docs_path, "docs")
+    file.copy(dir(docs_path, full.names=TRUE), "docs", recursive = TRUE, overwrite = TRUE)
     stopifnot(file_test("-d", "docs"))
   })
-  
-  preview_site(pkg = pkg, preview = preview)
+
+  ## DON'T use pkg here (docs is in main dir)
+  ## preview_site(pkg = ".", preview = preview)
+  ## preview_site appears to assume that docs are within pkg dir?
+  if (isTRUE(preview) || (is.na(preview) && interactive())) {
+    browseURL("docs/index.html")
+  }
 }
