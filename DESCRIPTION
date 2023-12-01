@@ -1,5 +1,5 @@
 Package: pkgdown.extras
-Version: 0.0.0-9003
+Version: 0.0.0-9005
 Title: Enhancing the 'pkgdown' Package
 Imports:
     desc,
@@ -19,5 +19,5 @@ LazyLoad: TRUE
 ByteCompile: TRUE
 URL: https://github.com/HenrikBengtsson/pkgdown.extras
 BugReports: https://github.com/HenrikBengtsson/pkgdown.extras/issues
-RoxygenNote: 7.1.2
+RoxygenNote: 7.2.1
 Roxygen: list(markdown = TRUE)

@@ -206,17 +206,26 @@ build_site <- function(pkg = ".", ..., github = TRUE, preview = NA) {
 
   # Mention 'pkgdown.extras' in page footers
   htmls <- dir("docs", pattern = "[.]html$", full.names = TRUE, recursive = TRUE)
-  search <- "<p>(Site built with .*)</p>"
+  search <- "<p>(Site built with .*)(|</p>)"
   replace <- sprintf("<p>\\1 and <a href=\"https://github.com/HenrikBengtsson/%s/\">%s</a> %s.</p>", .packageName, .packageName, packageVersion(.packageName))
   warn <- TRUE
   for (kk in seq_along(htmls)) {
     html <- htmls[kk]
     bfr <- readLines(html, warn = FALSE)
-    idxs <- grep(search, bfr)
-    if (length(idxs) == 0) next
-    bfr[idxs] <- gsub(search, replace, bfr[idxs])
-    bfr[idxs] <- gsub(". and ", " and ", bfr[idxs], fixed = TRUE)
-    bfr[idxs] <- gsub(".</p> and ", "</p> and ", bfr[idxs], fixed = TRUE)
+    idx <- rev(grep(search, bfr))[1]
+    if (is.na(idx)) next
+
+    ## If pkgdown and it's version are not on the same line, merge lines
+    if (!grepl("</p>", bfr[idx])) {
+      if (idx == length(bfr)) next
+      if (!grepl("</p>", bfr[idx+1])) next
+      bfr[idx] <- paste(bfr[idx + 0:1], collapse = " ")
+      bfr[idx+1] <- ""
+    }
+    
+    bfr[idx] <- gsub(search, replace, bfr[idx])
+    bfr[idx] <- gsub(". and ", " and ", bfr[idx], fixed = TRUE)
+    bfr[idx] <- gsub(".</p> and ", "</p> and ", bfr[idx], fixed = TRUE)
     writeLines(bfr, con = html)
     warn <- FALSE
   }
