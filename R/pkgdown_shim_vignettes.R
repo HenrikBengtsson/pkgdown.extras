@@ -24,6 +24,11 @@ pkgdown_shim_vignettes <- function(path = ".", ...) {
   
   ## Find vignettes
   vignettes <- pkgVignettes(dir = ".")
+  rmd_vig <- grepl("[Rr]md$", vignettes$docs)
+  if (any(rmd_vig)) {
+      vig_el <- c("docs", "names", "engines", "patterns", "encodings")
+      vignettes[vig_el] <- sapply(vignettes[vig_el], function(x) x[!rmd_vig])
+  }
   nvignettes <- length(vignettes$docs)
   if (nvignettes > 0) {
     rule("Shimming package vignettes")
