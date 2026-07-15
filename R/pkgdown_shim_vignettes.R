@@ -23,6 +23,7 @@ pkgdown_shim_vignettes <- function(path = ".", ...) {
   
   ## Find vignettes
   vignettes <- pkgVignettes(dir = ".")
+  assert_vignettes_recognized(vignettes, dir = ".")
   nvignettes <- length(vignettes$docs)
   if (nvignettes > 0) {
     rule("Shimming package vignettes")
@@ -98,6 +99,60 @@ pkgdown_shim_vignettes <- function(path = ".", ...) {
 
   vignettes
 } ## pkgdown_shim_vignettes()
+
+
+# Assert that all files declaring a %\VignetteEngine{...} directive were
+# recognized by tools::pkgVignettes().  If the package that provides a
+# vignette engine is not installed, then pkgVignettes() ignores such
+# vignettes silently, which results in articles silently being dropped
+# from the pkgdown site.
+#' @importFrom utils file_test
+#' @importFrom tools file_ext
+assert_vignettes_recognized <- function(vignettes, dir = ".") {
+  vign_dir <- vignettes$dir
+  if (is.null(vign_dir)) vign_dir <- file.path(dir, "vignettes")
+  if (!file_test("-d", vign_dir)) return(invisible(vignettes))
+
+  files <- dir(vign_dir, full.names = TRUE)
+  files <- files[file_test("-f", files)]
+
+  ## Ignore non-source files, e.g. figures
+  skip_exts <- c("css", "gif", "jpeg", "jpg", "pdf", "png", "svg", "webp")
+  files <- files[!tolower(file_ext(files)) %in% skip_exts]
+  if (length(files) == 0) return(invisible(vignettes))
+
+  ## Which files declare a %\VignetteEngine{<pkg>::<engine>} directive?
+  engines <- vapply(files, FUN.VALUE = NA_character_, FUN = function(file) {
+    bfr <- tryCatch(suppressWarnings({
+      readLines(file, n = 100L, warn = FALSE)
+    }), error = function(e) character(0L))
+    hit <- grep("\\VignetteEngine{", bfr, fixed = TRUE, value = TRUE,
+                useBytes = TRUE)
+    if (length(hit) == 0) return(NA_character_)
+    sub(".*VignetteEngine[{]([^}]*)[}].*", "\\1", hit[1], useBytes = TRUE)
+  })
+
+  missed <- !is.na(engines) & !(basename(files) %in% basename(vignettes$docs))
+  if (!any(missed)) return(invisible(vignettes))
+
+  pkgs <- unique(sub("::.*", "", engines[missed]))
+  installed <- vapply(pkgs, FUN.VALUE = FALSE, FUN = function(pkg) {
+    nzchar(system.file(package = pkg))
+  })
+
+  missed_names <- sQuote(basename(files[missed]))
+  if (length(missed_names) > 5) {
+    missed_names <- c(missed_names[1:5],
+                      sprintf("... (%d more)", length(missed_names) - 5L))
+  }
+  msg <- sprintf("Detected %d vignette file(s) that declare a vignette engine, but that were not recognized by tools::pkgVignettes(), meaning they would silently be dropped as pkgdown articles: %s.", sum(missed), paste(missed_names, collapse = ", "))
+  if (any(!installed)) {
+    msg <- sprintf("%s The most likely reason is that the package(s) providing the vignette engine(s) are not installed: %s. To fix this, install them and retry.", msg, paste(sQuote(pkgs[!installed]), collapse = ", "))
+  } else {
+    msg <- sprintf("%s The package(s) providing the vignette engine(s) appear to be installed (%s), so another possible reason is that the 'VignetteBuilder' field of the DESCRIPTION file does not list them.", msg, paste(sQuote(pkgs), collapse = ", "))
+  }
+  stop(msg, call. = FALSE)
+}
 
 
 
